@@ -1,0 +1,398 @@
+#include <fstream>
+#include <iostream>
+#include <map>
+#include "CLexicalAnalyzer.h"
+
+using namespace std;
+
+class LexicalException : exception
+{
+	int numberLine, numberLiter;
+public:
+	LexicalException(int _numberLine, int _numberLiter, const char* errorDescription)
+		: exception(errorDescription)
+	{
+		numberLine = _numberLine;
+		numberLiter = _numberLiter;
+	}
+
+	virtual const char* what() const throw()
+	{
+		string x = "LexicalException: position: " +
+			to_string(numberLine) + "," + to_string(numberLiter) +
+			".Description " + exception::what();
+		return "tests";
+	}
+};
+
+
+const map<string, int> keywordsMap =
+	{
+		{"begin", compiler::_begin},
+		{"end", compiler::_end},
+		{"var", compiler::_var},
+		{"and", compiler::_and},
+		{"array", compiler::_array},
+		{"case", compiler::_case},
+		{"const", compiler::_const},
+		{"div", compiler::_div},
+		{"do", compiler::_do},
+		{"file", compiler::_file},
+		{"for", compiler::_for},
+		{"if", compiler::_if},
+		{"then", compiler::_then},
+		{"else", compiler::_else},
+		{"in", compiler::_in},
+		{"mod", compiler::_mod},
+		{"not", compiler::_not},
+		{"or", compiler::_or},
+		{"program", compiler::_program},
+		{"to", compiler::_to},
+		{"while", compiler::_while},
+		{"readln", compiler::_readln},
+		{"writeln", compiler::_writeln}
+	};
+
+bool CLexicalAnalyzer::IsInteger(string numberString, int& value)
+{
+	try {
+		value = stoi(numberString);
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+bool CLexicalAnalyzer::IsDouble(string numberString, double& value)
+{
+	try {
+		value = stod(numberString);
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
+bool CLexicalAnalyzer::IsCharacter(char c)
+{
+	return 'A' <= c && c <= 'Z' ||
+		'a' <= c && c <= 'z';
+}
+
+bool CLexicalAnalyzer::IsDigit(char c)
+{
+	return '0' <= c && c <= '9';
+}
+
+CLexicalAnalyzer::CLexicalAnalyzer(string fileName) 
+{
+	//открываем файл с исходным кодом на чтение
+	inputStream.open(fileName);
+	numberCurrentLine = 0;
+	numberCurrentLiter = 0;
+}
+
+char CLexicalAnalyzer::GetNextChar()
+{
+	//если текущая строка пустая или уже обработана
+	if (line == "" || numberCurrentLiter == line.length())
+	{
+		//если не конец файла, то считываем новую строку
+		if (!inputStream.eof())
+		{
+			getline(inputStream, line);
+			line += '\n';
+			//inputStream >> line;
+			numberCurrentLine++;
+			numberCurrentLiter = 0;
+		}
+		else
+			return EOF;
+	}
+
+	if (line.length() > 0)
+	{
+		return line[numberCurrentLiter++];
+	}
+}
+
+CToken* CLexicalAnalyzer::GetNextToken()
+{
+	//пропускаем пробельные символы
+	while (currentChar == ' ' || currentChar == '\t' ||
+		currentChar == '\0' || currentChar == '\n')
+		currentChar = GetNextChar();
+	switch (currentChar)
+	{
+		//пропускаем комментарии
+	case '{':
+		while (currentChar != '}')
+			currentChar = GetNextChar();
+		currentChar = GetNextChar();
+	case '(':
+		currentChar = GetNextChar();
+		if (currentChar == '*')
+		{
+			currentChar = GetNextChar();
+			char prevChar = '0';
+			while (currentChar != ')' && prevChar != '*')
+			{
+				prevChar = currentChar;
+				currentChar = GetNextChar();
+			}
+			currentChar = GetNextChar();
+		}
+		else
+			return new CToken(Operator, leftpar);
+	case ')':
+		currentChar = GetNextChar();
+		return new CToken(Operator, rightpar);
+	case '/':
+		currentChar = GetNextChar();
+		if (currentChar == '/')
+		{
+			while (currentChar != '\n')
+				currentChar = GetNextChar();
+			currentChar = GetNextChar();
+		}
+		else
+			return new CToken(Operator, slash);
+	case '+':
+		currentChar = GetNextChar();
+		return new CToken(Operator, compiler::plus);
+	case '-':
+		currentChar = GetNextChar();
+		return new CToken(Operator, compiler::minus);
+	case '*':
+		currentChar = GetNextChar();
+		return new CToken(Operator, star);
+	case '=':
+		currentChar = GetNextChar();
+		return new CToken(Operator, compiler::equal);
+	case '.':
+		currentChar = GetNextChar();
+		if (currentChar == '.')
+		{
+			currentChar = GetNextChar();
+			return new CToken(Operator, twopoints);
+		}
+		return new CToken(Operator, point);
+	case ',':
+		currentChar = GetNextChar();
+		return new CToken(Operator, comma);
+	case '<':
+		currentChar = GetNextChar();
+		if (currentChar == '=')
+		{
+			currentChar = GetNextChar();
+			return new CToken(Operator, laterequal);
+		}
+		if (currentChar == '>')
+		{
+			currentChar = GetNextChar();
+			return new CToken(Operator, latergreater);
+		}
+		currentChar = GetNextChar();
+		return new CToken(Operator, later);
+	case ':':
+		currentChar = GetNextChar();
+		if (currentChar == '=')
+		{
+			currentChar = GetNextChar();
+			return new CToken(Operator, assign);
+		}
+		return new CToken(Operator, colon);
+	case ';':
+		currentChar = GetNextChar();
+		return new CToken(Operator, semicolon);
+	case '^':
+		currentChar = GetNextChar();
+		return new CToken(Operator, arrow);
+	case '[':
+		currentChar = GetNextChar();
+		return new CToken(Operator, lbracket);
+	case ']':
+		currentChar = GetNextChar();
+		return new CToken(Operator, rbracket);
+	case '\'':
+	{
+		string str = "";
+		currentChar = GetNextChar();
+		while (currentChar != '\'')
+		{
+			str += currentChar;
+			currentChar = GetNextChar();
+		}
+		currentChar = GetNextChar();
+		return new CToken(Value, new CStringVariant(str));
+	}
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
+		//количество точек в числе
+		int countPoints = 0;
+		string numberString = "";
+		while (currentChar >= '0' && currentChar <= '9' || currentChar == '.')
+		{
+			if (currentChar == '.')
+			{
+				if (countPoints == 0)
+					countPoints++;
+				else
+				{
+					//если встрачаем уже не первую точку, то это ошибка
+					throw LexicalException(numberCurrentLine, numberCurrentLiter, "Second point in number");
+				}
+			}
+			else
+				numberString += currentChar;
+			currentChar = GetNextChar();
+		}
+		int intValue;
+		if (IsInteger(numberString, intValue))
+			return new CToken(Value, new CIntegerVariant(intValue));
+		double doubleValue;
+		if (IsDouble(numberString, doubleValue))
+			return new CToken(Value, new CRealVariant(doubleValue));
+		break;
+	}
+
+	if (IsCharacter(currentChar))
+	{
+		string identifier = "";
+		while (IsCharacter(currentChar) ||
+			currentChar == '_' ||
+			IsDigit(currentChar))
+		{
+			identifier += currentChar;
+			currentChar = GetNextChar();
+		}
+		const auto foundKeyword = keywordsMap.find(identifier);
+		//если идентификатор является ключевым словом
+		if (foundKeyword != keywordsMap.cend())
+			return new CToken(Operator, (EOperator)foundKeyword->second);
+		return new CToken(Identifier, identifier);
+	}
+	return nullptr;
+}
+
+//class CLexicalAnalyzer
+//{
+//private:
+//	const map<string, int> keywordsMap =
+//	{
+//		{"begin", compiler::_begin},
+//		{"end", compiler::_end},
+//		{"var", compiler::_var},
+//		{"and", compiler::_and},
+//		{"array", compiler::_array},
+//		{"case", compiler::_case},
+//		{"const", compiler::_const},
+//		{"div", compiler::_div},
+//		{"do", compiler::_do},
+//		{"file", compiler::_file},
+//		{"for", compiler::_for},
+//		{"if", compiler::_if},
+//		{"then", compiler::_then},
+//		{"else", compiler::_else},
+//		{"in", compiler::_in},
+//		{"mod", compiler::_mod},
+//		{"not", compiler::_not},
+//		{"or", compiler::_or},
+//		{"program", compiler::_program},
+//		{"to", compiler::_to},
+//		{"while", compiler::_while},
+//		{"readln", compiler::_readln},
+//		{"writeln", compiler::_writeln}
+//	};
+//	ifstream inputStream;
+//	string line = "";
+//	int numberCurrentLine, numberCurrentLiter;
+//	char currentChar;
+//	bool IsInteger(string numberString, int& value)
+//	{
+//		try {
+//			value = stoi(numberString);
+//			return true;
+//		}
+//		catch (...)
+//		{
+//			return false;
+//		}
+//	}
+//	bool IsDouble(string numberString, double& value)
+//	{
+//		try {
+//			value = stod(numberString);
+//			return true;
+//		}
+//		catch (...)
+//		{
+//			return false;
+//		}
+//	}
+//	/// <summary>
+//	/// Проверяет является ли символ буквой
+//	/// </summary>
+//	/// <param name="c"></param>
+//	/// <returns></returns>
+//	bool IsCharacter(char c)
+//	{
+//		return 'A' <= c && c <= 'Z' ||
+//			'a' <= c && c <= 'z';
+//	}
+//	/// <summary>
+//	/// Проверяет является ли символ цифрой
+//	/// </summary>
+//	/// <param name="c"></param>
+//	/// <returns></returns>
+//	bool IsDigit(char c)
+//	{
+//		return '0' <= c && c <= '9';
+//	}
+//public:
+//	CLexicalAnalyzer(string fileName) {
+//		//открываем файл с исходным кодом на чтение
+//		inputStream.open(fileName);
+//		numberCurrentLine = 0;
+//		numberCurrentLiter = 0;
+//	}
+//
+//
+//	char GetNextChar()
+//	{
+//		//если текущая строка пустая или уже обработана
+//		if (line == "" || numberCurrentLiter == line.length())
+//		{
+//			//если не конец файла, то считываем новую строку
+//			if (!inputStream.eof())
+//			{
+//				getline(inputStream, line);
+//				line += '\n';
+//				//inputStream >> line;
+//				numberCurrentLine++;
+//				numberCurrentLiter = 0;
+//			}
+//			else
+//				return EOF;
+//		}
+//
+//		if (line.length() > 0)
+//		{
+//			return line[numberCurrentLiter++];
+//		}
+//	}
+//
+//	
+//};

@@ -1,30 +1,36 @@
 #pragma once
 #include <list>
-#include "CError.h"
-#include "Token.h"
+#include "CToken.h"
 #include <fstream>
 #include <iostream>
 
 using namespace std;
 
+
 class CLexicalAnalyzer 
 {
-	/// <summary>
-	/// Поток для чтения файла с исходным кодом
-	/// </summary>
+private:
 	ifstream inputStream;
-	int currentLine, currentSymbol;
+	string line = "";
+	int numberCurrentLine, numberCurrentLiter;
+	char currentChar;
+	bool IsInteger(string numberString, int& value);
+	bool IsDouble(string numberString, double& value);
+	/// <summary>
+	/// Проверяет является ли символ буквой
+	/// </summary>
+	/// <param name="c"></param>
+	/// <returns></returns>
+	bool IsCharacter(char c);
+	/// <summary>
+	/// Проверяет является ли символ цифрой
+	/// </summary>
+	/// <param name="c"></param>
+	/// <returns></returns>
+	bool IsDigit(char c);
+	char GetNextChar();
+public:
 	CLexicalAnalyzer(string fileName);
-	/// <summary>
-	/// Список ошибок
-	/// </summary>
-	list<CError> errors;
-	void AddError(CError error);
-	/// <summary>
-	/// Считывает новый токен
-	/// </summary>
-	/// <param name="token"></param>
-	CToken ReadToken();
 	/// <summary>
 	/// Отдает следующий токен наружу
 	/// </summary>

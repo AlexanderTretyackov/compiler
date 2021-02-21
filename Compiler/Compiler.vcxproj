@@ -116,6 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>Default</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,13 +140,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="IOModule.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="CError.h" />
     <ClInclude Include="CLexicalAnalyzer.h" />
     <ClInclude Include="CVariant.h" />
-    <ClInclude Include="Token.h" />
+    <ClInclude Include="CToken.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CLexicalAnalyzer.cpp" />
+    <ClCompile Include="CToken.cpp" />
+    <ClCompile Include="CVariant.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
