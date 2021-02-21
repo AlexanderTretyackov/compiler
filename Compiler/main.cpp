@@ -20,7 +20,8 @@ int main() {
 	
 	while ((token = lexicalAnalyzer.GetNextToken()) != nullptr)
 	{
-		string str = token->ToString();
+		CTokenPtr c(token);
+		string str = c->ToString();
 		cout << str << endl;
 	}
 	//char c;

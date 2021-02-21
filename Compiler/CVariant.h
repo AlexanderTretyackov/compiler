@@ -1,6 +1,19 @@
 #pragma once
 #include <string>
 
+#include <string>
+#include <iostream>
+
+// Для работы с умными указателями
+#include <memory>
+
+// Так же можно типизировать функцию-фабрику умных указателей:
+template<typename T, typename... Params>
+std::unique_ptr<T> CreatePtr(Params... parameters)
+{
+	return std::make_unique<T>(parameters...);
+}
+
 enum EVariantType
 {
 	Integer,
@@ -18,6 +31,7 @@ public:
 	CVariant(EVariantType variantType);
 	virtual string ToString();
 };
+typedef std::unique_ptr<CVariant> CVariantPtr;
 
 class CIntegerVariant : public CVariant
 {

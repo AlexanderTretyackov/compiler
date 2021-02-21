@@ -70,7 +70,7 @@ public:
 	/// Если тип токена - оператор, то тут будет тип оператора
 	/// </summary>
 	EOperator _operator;
-	CVariant* variant;
+	CVariantPtr variantPtr;
 	string identifier;
 	/// <summary>
 	/// для значения
@@ -87,3 +87,5 @@ public:
 	CToken(ETokenType tokenType, string identifier);
 	string ToString();
 };
+
+typedef std::unique_ptr<CToken> CTokenPtr;

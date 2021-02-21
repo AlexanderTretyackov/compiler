@@ -3,7 +3,8 @@
 CToken::CToken(ETokenType tokenType, CVariant* _variant)
 {
 	type = tokenType;
-	variant = _variant;
+	// reset выполняет удаление предыдущего объекта, на который ссылался указатель, и установку нового значения.
+	variantPtr.reset(_variant);
 }
 
 CToken::CToken(ETokenType tokenType, EOperator operatorType)
@@ -25,7 +26,7 @@ string CToken::ToString()
 		case Identifier:
 			return identifier;
 		case Value:
-			return variant->ToString();
+			return variantPtr->ToString();
 		case Operator:
 			return to_string((int)_operator);
 	}
