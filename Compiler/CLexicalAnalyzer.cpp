@@ -2,27 +2,14 @@
 #include <iostream>
 #include <map>
 #include "CLexicalAnalyzer.h"
+#include "CException.h"
 
 using namespace std;
 
-class LexicalException : exception
+const map<int, string> errorsMap =
 {
-	int numberLine, numberLiter;
-public:
-	LexicalException(int _numberLine, int _numberLiter, const char* errorDescription)
-		: exception(errorDescription)
-	{
-		numberLine = _numberLine;
-		numberLiter = _numberLiter;
-	}
-
-	virtual const char* what() const throw()
-	{
-		string x = "LexicalException: position: " +
-			to_string(numberLine) + "," + to_string(numberLiter) +
-			".Description " + exception::what();
-		return "tests";
-	}
+	{ invalidLiter, "Invalid liter."},
+	{ invalidConstant, "Invalid constant."}
 };
 
 
@@ -252,7 +239,8 @@ CToken* CLexicalAnalyzer::GetNextToken()
 				else
 				{
 					//если встрачаем уже не первую точку, то это ошибка
-					throw LexicalException(numberCurrentLine, numberCurrentLiter, "Second point in number");
+					throw LexicalException(numberCurrentLine, numberCurrentLiter, 
+						errorsMap.find(invalidConstant)->second.c_str());
 				}
 			}
 			else
@@ -284,5 +272,11 @@ CToken* CLexicalAnalyzer::GetNextToken()
 			return new CToken(Operator, (EOperator)foundKeyword->second);
 		return new CToken(Identifier, identifier);
 	}
-	return nullptr;
+
+	if(currentChar == EOF)
+		return nullptr;
+
+	//если встретили литеру не из алфавита
+	throw LexicalException(numberCurrentLine, numberCurrentLiter,
+		errorsMap.find(invalidLiter)->second.c_str());
 }

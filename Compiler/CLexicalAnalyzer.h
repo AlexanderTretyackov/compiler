@@ -6,6 +6,10 @@
 
 using namespace std;
 
+enum ELexicalError {
+	invalidLiter,//встретилась литера не принадлежащая алфавиту языка
+	invalidConstant,//
+};
 
 class CLexicalAnalyzer 
 {

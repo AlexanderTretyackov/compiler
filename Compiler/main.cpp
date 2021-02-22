@@ -2,6 +2,7 @@
 #include <list>
 #include "CToken.h"
 #include "CLexicalAnalyzer.h"
+#include "CException.h"
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -16,14 +17,19 @@ using namespace std;
 
 int main() {
 	auto lexicalAnalyzer = CLexicalAnalyzer("pascal.txt");
-	CToken* token;
-	
-	while ((token = lexicalAnalyzer.GetNextToken()) != nullptr)
-	{
-		CTokenPtr c(token);
-		string str = c->ToString();
-		cout << str << endl;
-	}
+	CToken* token = nullptr;
+	do {
+		try {
+			token = lexicalAnalyzer.GetNextToken();
+			CTokenPtr c(token);
+			string str = c->ToString();
+			cout << str << endl;
+		}
+		catch (LexicalException& e)
+		{
+			cout << e.ToString() << '\n';
+		}
+	} while (token != nullptr);
 	//char c;
 	//while((c = lexicalAnalyzer.GetNextChar()) != EOF)
 	//{
