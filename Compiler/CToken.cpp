@@ -32,3 +32,16 @@ string CToken::ToString()
 	}
 	return "empty_token";
 }
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!! Метод предназначен пока только для сравнения при пропуске
+bool CToken::IsEqual(CToken* otherToken) {
+	CTokenPtr otherTokenPtr(otherToken);
+	if (otherToken == nullptr)
+		return false;
+	if (otherTokenPtr->type == type)
+	{
+		//если токены явл. операторами, то типы операторов должны совпадать
+		if (type == Operator)
+			return _operator == otherToken->_operator;
+	}
+	return false;
+}

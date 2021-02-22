@@ -18,18 +18,29 @@ using namespace std;
 int main() {
 	auto lexicalAnalyzer = CLexicalAnalyzer("pascal.txt");
 	CToken* token = nullptr;
-	do {
+	do
+	{
+		CTokenPtr t;
 		try {
+			
 			token = lexicalAnalyzer.GetNextToken();
-			CTokenPtr c(token);
-			string str = c->ToString();
+			t.reset(token);		
+			string str = t->ToString();
 			cout << str << endl;
+			if (token->type == Eof)
+			{
+				return 0;
+			}
 		}
 		catch (LexicalException& e)
 		{
 			cout << e.ToString() << '\n';
+			auto targetToken = new CToken(Operator, semicolon);
+			//если при пропуске дошли до конца файла
+			if (!lexicalAnalyzer.SkipToToken(targetToken))
+				return 0;
 		}
-	} while (token != nullptr);
+	} while(true);
 	//char c;
 	//while((c = lexicalAnalyzer.GetNextChar()) != EOF)
 	//{

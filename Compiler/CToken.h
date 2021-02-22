@@ -51,14 +51,16 @@ namespace compiler {
 		_to,
 		_while,
 		_readln,
-		_writeln
+		_writeln,
+		_eof
 	};
 }
 enum ETokenType
 {
 	Identifier,
 	Value,
-	Operator
+	Operator,
+	Eof
 };
 
 using namespace compiler;
@@ -85,6 +87,12 @@ public:
 	/// <param name="operatorType"></param>
 	CToken(ETokenType tokenType, EOperator operatorType);
 	CToken(ETokenType tokenType, string identifier);
+	/// <summary>
+	/// Сравнивает токены на равенство
+	/// </summary>
+	/// <param name="otherToken"></param>
+	/// <returns>true если эквивалентны, false - иначе</returns>
+	bool IsEqual(CToken* otherToken);
 	string ToString();
 };
 

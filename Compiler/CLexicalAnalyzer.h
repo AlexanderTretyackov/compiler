@@ -40,4 +40,12 @@ public:
 	/// </summary>
 	/// <param name="token"></param>
 	CToken* GetNextToken();
+	/// <summary>
+	/// ѕропускает все токены до указанного в параметрах. 
+	/// ≈сли после вызова этого метода вызвать GetNextToken, 
+	/// то вернетс€ следующий после пропускаемого.
+	/// </summary>
+	/// <param name="token">“окен, до которого нужно пропускать</param>
+	/// <returns>true - если успешно пропущены токены до нужного, false - если не встретили нужного токена и дошли до конца файла</returns>
+	bool SkipToToken(CToken* token);
 };

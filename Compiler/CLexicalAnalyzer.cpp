@@ -227,24 +227,12 @@ CToken* CLexicalAnalyzer::GetNextToken()
 	case '7':
 	case '8':
 	case '9':
-		//количество точек в числе
-		int countPoints = 0;
 		string numberString = "";
+		int beginNumberCurrentLine = numberCurrentLine, 
+			beginNumberCurrentLiter = numberCurrentLiter;
 		while (currentChar >= '0' && currentChar <= '9' || currentChar == '.')
-		{
-			if (currentChar == '.')
-			{
-				if (countPoints == 0)
-					countPoints++;
-				else
-				{
-					//если встрачаем уже не первую точку, то это ошибка
-					throw LexicalException(numberCurrentLine, numberCurrentLiter, 
-						errorsMap.find(invalidConstant)->second.c_str());
-				}
-			}
-			else
-				numberString += currentChar;
+		{					
+			numberString += currentChar;
 			currentChar = GetNextChar();
 		}
 		int intValue;
@@ -253,6 +241,9 @@ CToken* CLexicalAnalyzer::GetNextToken()
 		double doubleValue;
 		if (IsDouble(numberString, doubleValue))
 			return new CToken(Value, new CRealVariant(doubleValue));
+		//если не удалось сконвертировать ни в целое ни в вещественное
+		throw LexicalException(beginNumberCurrentLine, beginNumberCurrentLiter,
+			errorsMap.find(invalidConstant)->second.c_str());
 		break;
 	}
 
@@ -274,9 +265,32 @@ CToken* CLexicalAnalyzer::GetNextToken()
 	}
 
 	if(currentChar == EOF)
-		return nullptr;
+		return new CToken(Eof, _eof);
 
+	int _line = numberCurrentLine,
+		_liter = numberCurrentLiter;
+	currentChar = GetNextChar();
 	//если встретили литеру не из алфавита
-	throw LexicalException(numberCurrentLine, numberCurrentLiter,
+	throw LexicalException(_line, _liter,
 		errorsMap.find(invalidLiter)->second.c_str());
+}
+
+bool CLexicalAnalyzer::SkipToToken(CToken* token)
+{
+	CTokenPtr currentTokenPtr(nullptr);
+	while (!token->IsEqual(currentTokenPtr.release()))
+	{
+		try {
+			currentTokenPtr.reset(GetNextToken());
+			//если дошли до конца файла
+			if (currentTokenPtr->type == Eof)
+				return false;
+			//cout << currentTokenPtr->ToString();
+		}
+		catch (LexicalException& e)
+		{
+			//cout << e.ToString() << '\n';
+		}
+	} 
+	return true;
 }
