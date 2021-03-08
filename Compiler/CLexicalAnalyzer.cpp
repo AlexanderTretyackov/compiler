@@ -261,17 +261,31 @@ CToken* CLexicalAnalyzer::GetNextToken()
 		string numberString = "";
 		int beginNumberCurrentLine = numberCurrentLine, 
 			beginNumberCurrentLiter = numberCurrentLiter;
+		int countPoints = 0;
 		while (currentChar >= '0' && currentChar <= '9' || currentChar == '.')
 		{					
+			if (currentChar == '.')
+				countPoints++;
 			numberString += currentChar;
 			currentChar = GetNextChar();
 		}
-		int intValue;
-		if (IsInteger(numberString, intValue))
-			return new CToken(Value, new CIntegerVariant(intValue));
-		double doubleValue;
-		if (IsDouble(numberString, doubleValue))
-			return new CToken(Value, new CRealVariant(doubleValue));
+
+		if (countPoints > 0)
+		{
+			if (countPoints == 1)
+			{
+				double doubleValue;
+				if (IsDouble(numberString, doubleValue))
+					return new CToken(Value, new CRealVariant(doubleValue));
+			}
+		}
+		else
+		{
+			int intValue;
+			if (IsInteger(numberString, intValue))
+				return new CToken(Value, new CIntegerVariant(intValue));
+		}
+			
 		//если не удалось сконвертировать ни в целое ни в вещественное
 		throw LexicalException(beginNumberCurrentLine, beginNumberCurrentLiter,
 			errorsMap.find(invalidConstant)->second.c_str());
