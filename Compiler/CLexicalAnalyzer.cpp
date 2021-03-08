@@ -3,7 +3,6 @@
 #include <map>
 #include "CLexicalAnalyzer.h"
 #include "CException.h"
-#include <ctype.h>
 
 using namespace std;
 
@@ -120,7 +119,8 @@ char CLexicalAnalyzer::GetNextChar()
 
 void CLexicalAnalyzer::SkipWhitespaces()
 {
-	while(isspace(currentChar) || currentChar == '\0')
+	while(currentChar == ' ' || currentChar == '\t' ||
+		currentChar == '\0' || currentChar == '\n')
 		currentChar = GetNextChar();
 }
 
