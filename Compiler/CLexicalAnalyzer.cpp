@@ -128,14 +128,16 @@ CToken* CLexicalAnalyzer::GetNextToken()
 {
 	//пропускаем пробельные символы
 	SkipWhitespaces();
-	switch (currentChar)
+
+	//пропускаем комментарии
+	if (currentChar == '{')
 	{
-		//пропускаем комментарии
-	case '{':
 		while (currentChar != '}')
 			currentChar = GetNextChar();
 		currentChar = GetNextChar();
-	case '(':
+	}
+	if (currentChar == '(')
+	{
 		currentChar = GetNextChar();
 		if (currentChar == '*')
 		{
@@ -147,10 +149,14 @@ CToken* CLexicalAnalyzer::GetNextToken()
 				currentChar = GetNextChar();
 			}
 			currentChar = GetNextChar();
-			SkipWhitespaces();
 		}
 		else
 			return new CToken(Operator, leftpar);
+	}
+	SkipWhitespaces();
+			
+	switch (currentChar)
+	{
 	case ')':
 		currentChar = GetNextChar();
 		return new CToken(Operator, rightpar);
