@@ -34,6 +34,8 @@ private:
 	bool IsDigit(char c);
 	char GetNextChar();
 public:
+	int GetNumberLine();
+	int GetNumberChar();
 	CLexicalAnalyzer(string fileName);
 	/// <summary>
 	/// Отдает следующий токен наружу

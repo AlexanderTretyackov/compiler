@@ -143,12 +143,14 @@
     <ClInclude Include="CError.h" />
     <ClInclude Include="CException.h" />
     <ClInclude Include="CLexicalAnalyzer.h" />
+    <ClInclude Include="CSyntaxAnalyzer.h" />
     <ClInclude Include="CVariant.h" />
     <ClInclude Include="CToken.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CException.cpp" />
     <ClCompile Include="CLexicalAnalyzer.cpp" />
+    <ClCompile Include="CSyntaxAnalyzer.cpp" />
     <ClCompile Include="CToken.cpp" />
     <ClCompile Include="CVariant.cpp" />
     <ClCompile Include="main.cpp" />

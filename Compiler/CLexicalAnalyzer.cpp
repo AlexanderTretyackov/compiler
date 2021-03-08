@@ -40,6 +40,16 @@ const map<string, int> keywordsMap =
 		{"writeln", compiler::_writeln}
 	};
 
+int CLexicalAnalyzer::GetNumberLine()
+{
+	return numberCurrentLine;
+}
+
+int CLexicalAnalyzer::GetNumberChar()
+{
+	return numberCurrentLiter;
+}
+
 bool CLexicalAnalyzer::IsInteger(string numberString, int& value)
 {
 	try {
