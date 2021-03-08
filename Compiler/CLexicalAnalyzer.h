@@ -33,6 +33,10 @@ private:
 	/// <returns></returns>
 	bool IsDigit(char c);
 	char GetNextChar();
+	/// <summary>
+	/// Пропускает пробельные символы
+	/// </summary>
+	void SkipWhitespaces();
 public:
 	int GetNumberLine();
 	int GetNumberChar();

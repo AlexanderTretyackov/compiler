@@ -3,6 +3,7 @@
 #include <map>
 #include "CLexicalAnalyzer.h"
 #include "CException.h"
+#include <ctype.h>
 
 using namespace std;
 
@@ -117,12 +118,16 @@ char CLexicalAnalyzer::GetNextChar()
 	}
 }
 
+void CLexicalAnalyzer::SkipWhitespaces()
+{
+	while(isspace(currentChar) || currentChar == '\0')
+		currentChar = GetNextChar();
+}
+
 CToken* CLexicalAnalyzer::GetNextToken()
 {
 	//пропускаем пробельные символы
-	while (currentChar == ' ' || currentChar == '\t' ||
-		currentChar == '\0' || currentChar == '\n')
-		currentChar = GetNextChar();
+	SkipWhitespaces();
 	switch (currentChar)
 	{
 		//пропускаем комментарии
@@ -142,6 +147,7 @@ CToken* CLexicalAnalyzer::GetNextToken()
 				currentChar = GetNextChar();
 			}
 			currentChar = GetNextChar();
+			SkipWhitespaces();
 		}
 		else
 			return new CToken(Operator, leftpar);
