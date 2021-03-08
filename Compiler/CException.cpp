@@ -11,7 +11,7 @@ string LexicalException::ToString()
 {
 	return "LexicalError: position: " +
 		to_string(numberLine) + "," + to_string(numberLiter) +
-		".Description " + exception::what();
+		".Description: " + exception::what();
 }
 
 SyntaxException::SyntaxException(int _numberLine, int _numberLiter, const char* errorDescription)
@@ -25,5 +25,5 @@ string SyntaxException::ToString()
 {
 	return "SyntaxError: position: " +
 		to_string(numberLine) + "," + to_string(numberLiter) +
-		".Description " + exception::what();
+		".Description: " + exception::what();
 }
