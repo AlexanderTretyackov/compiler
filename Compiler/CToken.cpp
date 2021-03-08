@@ -30,6 +30,7 @@ const string operatorsStr[50] =
 	"*)",
 	":=",
 	"..",
+	"begin",
 	"end",
 	"var",
 	"and",
