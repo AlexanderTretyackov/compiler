@@ -207,6 +207,15 @@ CToken* CLexicalAnalyzer::GetNextToken()
 		}
 		currentChar = GetNextChar();
 		return new CToken(Operator, later);
+	case '>':
+		currentChar = GetNextChar();
+		if (currentChar == '=')
+		{
+			currentChar = GetNextChar();
+			return new CToken(Operator, greaterequal);
+		}
+		currentChar = GetNextChar();
+		return new CToken(Operator, compiler::greater);
 	case ':':
 		currentChar = GetNextChar();
 		if (currentChar == '=')
