@@ -1,5 +1,59 @@
 #include "CToken.h"
 
+/// <summary>
+/// —троковые названи€ операторов (дл€ отладки)
+/// </summary>
+const string operatorsStr[50] =
+{
+	"*",
+	"/",
+	"=",
+	",",
+	";",
+	":",
+	".",
+	"^",
+	"(",
+	")",
+	"[",
+	"]",
+	"{",
+	"}",
+	"<",
+	">",
+	"<=",
+	">=",
+	"<>",
+	"+",
+	"-",
+	"(*",
+	"*)",
+	":=",
+	"..",
+	"end",
+	"var",
+	"and",
+	"array",
+	"case",
+	"const",
+	"div",
+	"do",
+	"file",
+	"for",
+	"if",
+	"then",
+	"else",
+	"in",
+	"mod",
+	"not",
+	"or",
+	"program",
+	"to",
+	"while",
+	"readln",
+	"writeln",
+};
+
 CToken::CToken(ETokenType tokenType, CVariant* _variant)
 {
 	type = tokenType;
@@ -28,7 +82,7 @@ string CToken::ToString()
 		case Value:
 			return variantPtr->ToString();
 		case Operator:
-			return to_string((int)_operator);
+			return operatorsStr[_operator];
 		case Eof:
 			return "End of file";
 	}
