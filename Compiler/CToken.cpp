@@ -29,6 +29,8 @@ string CToken::ToString()
 			return variantPtr->ToString();
 		case Operator:
 			return to_string((int)_operator);
+		case Eof:
+			return "End of file";
 	}
 	return "empty_token";
 }
