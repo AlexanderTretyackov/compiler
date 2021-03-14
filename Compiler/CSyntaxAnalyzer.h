@@ -11,9 +11,37 @@ class CSyntaxAnalyzer
 	CLexicalAnalyzer* lexicalAnalyzer;
 	CTokenPtr currentTokenPtr;
 	/// <summary>
-	/// Раздел объявление программы
+	/// программа
 	/// </summary>
 	void Program();
+	/// <summary>
+	/// блок
+	/// </summary>
+	void Block();
+	/// <summary>
+	/// раздел констант
+	/// </summary>
+	void BlockConstants();
+	/// <summary>
+	/// определение константы
+	/// </summary>
+	void DefinitionConstant();
+	/// <summary>
+	/// имя
+	/// </summary>
+	void Name();
+	/// <summary>
+	/// имя файла
+	/// </summary>
+	void FileName();
+	/// <summary>
+	/// константа
+	/// </summary>
+	void Constant();
+	/// <summary>
+	/// число без знака
+	/// </summary>
+	void NumberWithoutSign();
 	/// <summary>
 	/// Проверяет соответсвие текущего токена целевому
 	/// </summary>
@@ -25,4 +53,8 @@ class CSyntaxAnalyzer
 	void NextToken();
 public:
 	CSyntaxAnalyzer(string fileName);
+	/// <summary>
+	/// Запускает синтаксический анализ
+	/// </summary>
+	void Analyze();
 };
