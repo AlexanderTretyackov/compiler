@@ -1,8 +1,10 @@
 #pragma once
 #include <list>
+#include <map>
 #include "CLexicalAnalyzer.h"
 #include <fstream>
 #include <iostream>
+#include "CType.h"
 
 using namespace std;
 
@@ -10,6 +12,7 @@ class CSyntaxAnalyzer
 {
 	CLexicalAnalyzer* lexicalAnalyzer;
 	CTokenPtr currentTokenPtr;
+	map<string, CType*> IdentifiersMap;
 	/// <summary>
 	/// ןנמדנאללא
 	/// </summary>
