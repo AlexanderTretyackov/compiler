@@ -20,15 +20,6 @@ void CSyntaxAnalyzer::Program()
 {
 	Accept(new CToken(Operator, _program));
 	Name();
-	Accept(new CToken(Operator, leftpar));// (
-	FileName();
-	while (currentTokenPtr->type == Operator && 
-		currentTokenPtr->_operator == comma) // ,
-	{
-		NextToken();
-		FileName();
-	}
-	Accept(new CToken(Operator, rightpar));// )
 	Accept(new CToken(Operator, semicolon));// ;
 	Block();
 }
