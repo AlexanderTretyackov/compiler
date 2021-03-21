@@ -53,6 +53,7 @@ const string operatorsStr[50] =
 	"while",
 	"readln",
 	"writeln",
+	"type"
 };
 
 CToken::CToken(ETokenType tokenType, CVariant* _variant)

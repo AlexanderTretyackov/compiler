@@ -52,7 +52,8 @@ namespace compiler {
 		_while,
 		_readln,
 		_writeln,
-		_eof
+		_eof,
+		_type
 	};
 }
 enum ETokenType
