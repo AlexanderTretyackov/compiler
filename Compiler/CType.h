@@ -11,7 +11,8 @@ typedef std::unique_ptr<CType> CTypePtr;
 
 class CRecordType : CType {
 public:
-	CRecordType(EVariantType type, map<string, CType> identifiersMap);
+	CRecordType(EVariantType type, string name, map<string, CType> identifiersMap);
+	string name;
 	map<string, CType> identifiersMap;
 };
 
