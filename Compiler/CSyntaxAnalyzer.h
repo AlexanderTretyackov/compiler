@@ -12,7 +12,16 @@ class CSyntaxAnalyzer
 {
 	CLexicalAnalyzer* lexicalAnalyzer;
 	CTokenPtr currentTokenPtr;
-	map<string, CType*> IdentifiersMap;
+	//таблица типов : ключ-название типа, значение-сам тип
+	map<string, CType*> mapTypes = {
+		{
+			{"begin", new CType(Integer)},
+			{"char", new CType(Char)},
+			{"real", new CType(Real)}
+		}
+	};
+	//таблица идентификаторов : ключ-идентификатор, значение-тип идентификатора
+	map<string, CType*> mapIdentifiers;
 	/// <summary>
 	/// программа
 	/// </summary>
@@ -22,6 +31,14 @@ class CSyntaxAnalyzer
 	/// </summary>
 	void Block();
 	/// <summary>
+	/// раздел типов
+	/// </summary>
+	void BlockTypes();
+	/// <summary>
+	/// определение типа
+	/// </summary>
+	void DefinitionType();
+	/// <summary>
 	/// раздел констант
 	/// </summary>
 	void BlockConstants();
@@ -30,9 +47,63 @@ class CSyntaxAnalyzer
 	/// </summary>
 	void DefinitionConstant();
 	/// <summary>
+	/// раздел переменных
+	/// </summary>
+	void BlockVariables();
+	/// <summary>
+	/// описание однотипных переменных
+	/// </summary>
+	void DefinitionVariables();
+	/// <summary>
+	/// тип
+	/// </summary>
+	/// <returns></returns>
+	CType* Type();
+	/// <summary>
+	/// простой тип
+	/// </summary>
+	/// <returns></returns>
+	CType* SimpleType();
+	/// <summary>
+	/// раздел операторов
+	/// </summary>
+	void BlockOperators();
+	/// <summary>
+	/// составной оператор
+	/// </summary>
+	void CompountOperator();
+	/// <summary>
+	/// оператор
+	/// </summary>
+	void _Operator();
+	/// <summary>
+	/// непомеченный оператор
+	/// </summary>
+	void UnlabeledOperator();
+	/// <summary>
+	/// простой оператор
+	/// </summary>
+	void SimpleOperator();
+	/// <summary>
+	/// сложный оператор
+	/// </summary>
+	void ComplexOperator();
+	/// <summary>
+	/// оператор присваивания
+	/// </summary>
+	void AssignOperator();
+	/// <summary>
+	/// переменная
+	/// </summary>
+	CType* Variable();
+	/// <summary>
+	/// выражение
+	/// </summary>
+	void Expression();
+	/// <summary>
 	/// имя
 	/// </summary>
-	void Name();
+	string Name();
 	/// <summary>
 	/// имя файла
 	/// </summary>
