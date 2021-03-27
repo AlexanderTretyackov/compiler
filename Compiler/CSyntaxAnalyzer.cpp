@@ -3,6 +3,8 @@
 #include "CException.h"
 #include <list>
 
+using namespace types;
+
 CSyntaxAnalyzer::CSyntaxAnalyzer(string fileName)
 {
 	lexicalAnalyzer = new CLexicalAnalyzer(fileName);
@@ -34,6 +36,8 @@ void CSyntaxAnalyzer::Block()
 		BlockTypes();
 	if(currentTokenPtr->type == Operator && currentTokenPtr->_operator == _var)
 		BlockVariables();
+	if (currentTokenPtr->type == Operator && currentTokenPtr->_operator == _begin)
+		BlockOperators();
 }
 
 void CSyntaxAnalyzer::BlockTypes()
@@ -48,7 +52,9 @@ void CSyntaxAnalyzer::BlockTypes()
 
 void CSyntaxAnalyzer::DefinitionType()
 {
-
+	auto ident = Name();
+	Accept(new CToken(Operator, compiler::equal));//=
+	auto type = Type();
 }
 
 /// <summary>
@@ -72,11 +78,8 @@ void CSyntaxAnalyzer::DefinitionConstant()
 void CSyntaxAnalyzer::BlockVariables()
 {
 	Accept(new CToken(Operator, _var));
-	if (currentTokenPtr->type == Operator && currentTokenPtr->_operator == _var)
-	{
-		while(currentTokenPtr->type == Identifier)
-			DefinitionVariables();
-	}
+	while(currentTokenPtr->type == Identifier)
+		DefinitionVariables();
 }
 
 void CSyntaxAnalyzer::DefinitionVariables()
@@ -86,7 +89,7 @@ void CSyntaxAnalyzer::DefinitionVariables()
 	//идентификатор новой переменной
 	auto newVariableIdentifier = Name();
 	//если переменная с таким идентификатором уже содержится в области видимости, то кидаем исключение
-	if (mapIdentifiers.count(newVariableIdentifier) != 0);
+	if (mapIdentifiers.count(newVariableIdentifier) != 0)
 		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Identifier already exist");
 	//записываем в временный список новый идентификатор
@@ -105,6 +108,7 @@ void CSyntaxAnalyzer::DefinitionVariables()
 	}
 	Accept(new CToken(Operator, colon));//:
 	auto typeVariables = Type();
+	Accept(new CToken(Operator, semicolon));//;
 	//указываем тип у добавленных идентификаторов
 	for (auto iterator = listNewVariablesIdentifiers.begin(); iterator != listNewVariablesIdentifiers.end(); iterator++) 
 	{
@@ -115,6 +119,8 @@ void CSyntaxAnalyzer::DefinitionVariables()
 
 CType* CSyntaxAnalyzer::Type()
 {
+	if (currentTokenPtr->type == Identifier && currentTokenPtr->identifier == "record")
+		return CombinedType();
 	return SimpleType();
 }
 
@@ -122,22 +128,60 @@ CType* CSyntaxAnalyzer::SimpleType()
 {
 	if (currentTokenPtr->type == Identifier)
 	{
-		if(currentTokenPtr->identifier == "integer")
-			return new CType(Integer);
-		if (currentTokenPtr->identifier == "real")
-			return new CType(Real);
-		if (currentTokenPtr->identifier == "char")
-			return new CType(Char);
-		if (currentTokenPtr->identifier == "string")
-			return new CType(String);
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
-			"Expected type identifier");
+		auto identifier = currentTokenPtr->identifier;
+		//если тип есть, то возвращаем его, иначе кидаем исключение
+		if (mapTypes.count(identifier) != 0)
+		{
+			NextToken();
+			return mapTypes[identifier];
+		}
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Type not defined");
 	}
+	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		"Expected type identifier");
+}
+
+CType* CSyntaxAnalyzer::CombinedType()
+{
+	return nullptr;
 }
 
 void CSyntaxAnalyzer::BlockOperators()
 {
 	CompountOperator();
+}
+
+void CSyntaxAnalyzer::IfOperator()
+{
+	Accept(new CToken(Operator, _if));
+	auto typeExpression = Expression();
+	if(typeExpression != typeBoolean)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Expected boolean type expression");
+	Accept(new CToken(Operator, _then));
+	_Operator();
+	if (currentTokenPtr->type == Operator && currentTokenPtr->_operator == _else)
+	{
+		NextToken();
+		_Operator();
+	}
+}
+
+void CSyntaxAnalyzer::CaseOperator()
+{
+	Accept(new CToken(Operator, _case));
+	auto typeExpression = Expression();
+	//case поддерживает только типы integer и char
+	if (typeExpression != typeInteger || typeExpression != typeChar)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Expected integer or char type expression");
+	Accept(new CToken(Operator, _of));
+
+}
+
+void CSyntaxAnalyzer::WithOperator()
+{
 }
 
 void CSyntaxAnalyzer::CompountOperator()
@@ -159,7 +203,10 @@ void CSyntaxAnalyzer::_Operator()
 
 void CSyntaxAnalyzer::UnlabeledOperator()
 {
-
+	if (currentTokenPtr->type == Identifier)
+		SimpleOperator();
+	else
+		ComplexOperator();
 }
 
 void CSyntaxAnalyzer::SimpleOperator()
@@ -169,31 +216,155 @@ void CSyntaxAnalyzer::SimpleOperator()
 
 void CSyntaxAnalyzer::ComplexOperator()
 {
+	if (currentTokenPtr->type == Operator)
+	{
+		switch (currentTokenPtr->_operator)
+		{
+			case _begin: CompountOperator(); return;
+			case _if: IfOperator(); return;
+			case _case: CaseOperator(); return;
+			case _with: WithOperator(); return;
+		}
+	}
 }
 
 void CSyntaxAnalyzer::AssignOperator()
 {
-	Variable();
+	auto typeVariable = Variable();
 	Accept(new CToken(Operator, assign));//:=
-	Expression();
+	auto typeExpression = Expression();
+	if(typeVariable != typeExpression)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Types variable and expression doesn't match");
 }
 
 CType* CSyntaxAnalyzer::Variable()
 {
-	return new CType(Integer);
+	if (currentTokenPtr->type != Identifier)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
+			"Expected variable");
+	//если в таблице идентификаторов нет рассматриваемой переменной, то кидаем исключение
+	if(mapIdentifiers.count(currentTokenPtr->identifier) == 0)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Variable not defined");
+	auto identifier = currentTokenPtr->identifier;
+	NextToken();
+	//возвращаем тип переменной
+	return mapIdentifiers[identifier];
 }
 
-void CSyntaxAnalyzer::Expression()
+CType* CSyntaxAnalyzer::Expression()
 {
+	auto typeExpression = SimpleExpression();
+	//если операция отношения
+	if (currentTokenPtr->type == Operator &&
+		(currentTokenPtr->_operator == later || //<
+			currentTokenPtr->_operator == compiler::greater || //>
+			currentTokenPtr->_operator == compiler::laterequal || //<=
+			currentTokenPtr->_operator == compiler::greaterequal || //>=
+			currentTokenPtr->_operator == compiler::latergreater)) //<>
+	{
+		NextToken();
+		if(typeExpression != SimpleExpression())
+			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+				"Expected another expression type");
+		//возвращаем логический тип для выражения, т.к. был оператор сравнения
+		return typeBoolean;
+	}
+	return typeExpression;
+}
+
+CType* CSyntaxAnalyzer::SimpleExpression()
+{
+	//сохраняем тип слагаемого
+	auto typeSummand = Summand();
+	while(currentTokenPtr->type == Operator && 
+			(currentTokenPtr->_operator == compiler::plus || //+
+			currentTokenPtr->_operator == compiler::minus || //-
+			currentTokenPtr->_operator == compiler::_or)) //or
+	{
+		NextToken();
+		//если типы слагаемых не совпадают, то кидаем исключение
+		if (typeSummand != Summand())
+			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
+				"Expected another type");
+	}
+	return typeSummand;
+}
+
+CType* CSyntaxAnalyzer::Summand()
+{
+	//сохраняем тип множителя
+	auto typeMultiplier = Multiplier();
+
+	while (currentTokenPtr->type == Operator &&
+		(currentTokenPtr->_operator == compiler::star || //*
+			currentTokenPtr->_operator == compiler::slash || ///
+			currentTokenPtr->_operator == compiler::_div ||
+			currentTokenPtr->_operator == compiler::_mod ||
+			currentTokenPtr->_operator == compiler::_and))
+	{
+		NextToken();
+		//если типы множителей не совпадают, то кидаем исключение
+		if (typeMultiplier != Multiplier())
+			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+				"Expected another type");
+	}
+	return typeMultiplier;
+}
+
+CType* CSyntaxAnalyzer::Multiplier()
+{
+	if (currentTokenPtr->type == Operator)
+	{
+		if (currentTokenPtr->_operator == leftpar)//(
+		{
+			NextToken();
+			auto typeExpression = Expression();
+			Accept(new CToken(Operator, rightpar));//)
+			return typeExpression;
+		}
+		if (currentTokenPtr->_operator == _not)
+		{
+			NextToken();
+			auto typeMultiplier = Expression();
+			if(typeMultiplier != typeBoolean)
+				throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+					"Expected boolean type multiplier");
+			return typeMultiplier;
+		}
+	}
+
+	if (currentTokenPtr->type == Value)
+	{
+		if (currentTokenPtr->variantPtr->type == Char)
+		{
+			NextToken();
+			return typeChar;
+		}
+		return NumberWithoutSign();
+	}
+
+	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		"Expected multiplier");
 }
 
 string CSyntaxAnalyzer::Name()
 {
 	if (currentTokenPtr->type == Identifier)
-		return currentTokenPtr->identifier;
-	else
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
-			"Expected identifier");
+	{
+		auto identifier = currentTokenPtr->identifier;
+		//если такой идентификатор не объявлен
+		if (mapIdentifiers.count(identifier) == 0)
+		{
+			NextToken();
+			return identifier;
+		}
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Identifier with same name already defined");
+	}
+	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
+		"Expected identifier");
 }
 
 void CSyntaxAnalyzer::FileName()
@@ -201,37 +372,45 @@ void CSyntaxAnalyzer::FileName()
 	Name();
 }
 
-void CSyntaxAnalyzer::Constant()
+CType* CSyntaxAnalyzer::Constant()
 {
 	if (currentTokenPtr->type == Value)
 	{
-		if (currentTokenPtr->variantPtr->type == Char ||
-			currentTokenPtr->variantPtr->type == String)
+		auto typeVariant = currentTokenPtr->variantPtr->type;
+		NextToken();
+		switch (typeVariant)
 		{
-			NextToken();
-			return;
+			case Char: return typeChar;
+			case Integer: return typeInteger;
+			case Real: return typeReal;
 		}
+
 		if (currentTokenPtr->type == Operator &&
 			(currentTokenPtr->_operator == compiler::plus ||
 				currentTokenPtr->_operator == compiler::minus))
 		{
-			NumberWithoutSign();
+			NextToken();
+			return NumberWithoutSign();
 		}
+
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Expected constant");
 	}
 }
 
-void CSyntaxAnalyzer::NumberWithoutSign()
+CType* CSyntaxAnalyzer::NumberWithoutSign()
 {
-	if (currentTokenPtr->type == Value &&
-		(currentTokenPtr->variantPtr->type == Real ||
-			currentTokenPtr->variantPtr->type == Integer))
+	if (currentTokenPtr->type == Value)
+	{
+		auto variantType = currentTokenPtr->variantPtr->type;
 		NextToken();
-	else
-		throw SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), "NumberWithoutSign");
+		if (variantType == Real)
+			return typeReal;
+		if (variantType == Integer)
+			return typeInteger;
+	}
+	throw SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), "Expected NumberWithoutSign");
 }
-
-
-
 
 void CSyntaxAnalyzer::Accept(CToken* targetToken)
 {

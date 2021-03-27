@@ -7,17 +7,23 @@
 #include "CType.h"
 
 using namespace std;
+using namespace types;
 
 class CSyntaxAnalyzer
 {
 	CLexicalAnalyzer* lexicalAnalyzer;
 	CTokenPtr currentTokenPtr;
+	CType* typeInteger = new CType(EType::Integer);
+	CType* typeChar = new CType(EType::Char);
+	CType* typeReal = new CType(EType::Real);
+	CType* typeBoolean = new CType(EType::Boolean);
 	//таблица типов : ключ-название типа, значение-сам тип
 	map<string, CType*> mapTypes = {
 		{
-			{"begin", new CType(Integer)},
-			{"char", new CType(Char)},
-			{"real", new CType(Real)}
+			{"integer", typeInteger},
+			{"char", typeChar},
+			{"real", typeReal},
+			{"boolean", typeBoolean}
 		}
 	};
 	//таблица идентификаторов : ключ-идентификатор, значение-тип идентификатора
@@ -65,9 +71,26 @@ class CSyntaxAnalyzer
 	/// <returns></returns>
 	CType* SimpleType();
 	/// <summary>
+	/// комбинированный тип
+	/// </summary>
+	/// <returns></returns>
+	CType* CombinedType();
+	/// <summary>
 	/// раздел операторов
 	/// </summary>
 	void BlockOperators();
+	/// <summary>
+	/// условный оператор
+	/// </summary>
+	void IfOperator();
+	/// <summary>
+	/// оператор варианта
+	/// </summary>
+	void CaseOperator();
+	/// <summary>
+	/// оператор присоединения
+	/// </summary>
+	void WithOperator();
 	/// <summary>
 	/// составной оператор
 	/// </summary>
@@ -99,7 +122,20 @@ class CSyntaxAnalyzer
 	/// <summary>
 	/// выражение
 	/// </summary>
-	void Expression();
+	CType* Expression();
+	/// <summary>
+	/// простое выражение
+	/// </summary>
+	/// <returns></returns>
+	CType* SimpleExpression();
+	/// <summary>
+	/// слагаемое
+	/// </summary>
+	CType* Summand();
+	/// <summary>
+	/// множитель
+	/// </summary>
+	CType* Multiplier();
 	/// <summary>
 	/// имя
 	/// </summary>
@@ -111,11 +147,11 @@ class CSyntaxAnalyzer
 	/// <summary>
 	/// константа
 	/// </summary>
-	void Constant();
+	CType* Constant();
 	/// <summary>
 	/// число без знака
 	/// </summary>
-	void NumberWithoutSign();
+	CType* NumberWithoutSign();
 	/// <summary>
 	/// Проверяет соответсвие текущего токена целевому
 	/// </summary>
