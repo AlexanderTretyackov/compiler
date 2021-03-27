@@ -3,7 +3,7 @@
 /// <summary>
 /// —троковые названи€ операторов (дл€ отладки)
 /// </summary>
-const string operatorsStr[50] =
+const string operatorsStr[55] =
 {
 	"*",
 	"/",
@@ -54,7 +54,8 @@ const string operatorsStr[50] =
 	"readln",
 	"writeln",
 	"type",
-	"with"
+	"with",
+	"of"
 };
 
 CToken::CToken(ETokenType tokenType, CVariant* _variant)

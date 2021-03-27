@@ -39,7 +39,8 @@ const map<string, int> keywordsMap =
 		{"readln", compiler::_readln},
 		{"writeln", compiler::_writeln},
 		{"type", compiler::_type},
-		{"with", compiler::_with}
+		{"with", compiler::_with},
+		{"of", compiler::_of}
 	};
 
 int CLexicalAnalyzer::GetNumberLine()
