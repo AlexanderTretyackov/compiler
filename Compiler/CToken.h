@@ -53,7 +53,8 @@ namespace compiler {
 		_readln,
 		_writeln,
 		_eof,
-		_type
+		_type,
+		_with
 	};
 }
 enum ETokenType
