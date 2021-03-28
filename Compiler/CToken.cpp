@@ -53,6 +53,7 @@ const string operatorsStr[55] =
 	"while",
 	"readln",
 	"writeln",
+	"eof",
 	"type",
 	"with",
 	"of",
