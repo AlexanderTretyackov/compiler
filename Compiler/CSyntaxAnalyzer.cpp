@@ -179,7 +179,7 @@ map<string, CType*> CSyntaxAnalyzer::ListFields()
 	return mapFields;
 }
 
-void CSyntaxAnalyzer::SectionRecord(map<string, CType*> mapIdentifiersRecord)
+void CSyntaxAnalyzer::SectionRecord(map<string, CType*>& mapIdentifiersRecord)
 {
 	if (currentTokenPtr->type == Operator 
 		&& currentTokenPtr->_operator == _end)
@@ -214,7 +214,7 @@ void CSyntaxAnalyzer::SectionRecord(map<string, CType*> mapIdentifiersRecord)
 	}
 }
 
-string CSyntaxAnalyzer::NameField(map<string, CType*> mapIdentifiersRecord)
+string CSyntaxAnalyzer::NameField(map<string, CType*>& mapIdentifiersRecord)
 {
 	auto identifier = currentTokenPtr->identifier;
 	//если такой идентификатор не объ€влен
@@ -384,10 +384,40 @@ CType* CSyntaxAnalyzer::Variable()
 	if(mapIdentifiers.count(currentTokenPtr->identifier) == 0)
 		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Variable not defined");
+	//если тип переменной - запись
+	if (mapIdentifiers[currentTokenPtr->identifier]->type == EType::Record)
+		return VariableComponent();
+
 	auto identifier = currentTokenPtr->identifier;
 	NextToken();
 	//возвращаем тип переменной
 	return mapIdentifiers[identifier];
+}
+
+CType* CSyntaxAnalyzer::VariableComponent()
+{
+	return FieldDesignation();
+}
+
+CType* CSyntaxAnalyzer::FieldDesignation()
+{
+	auto identifierRecord = currentTokenPtr->identifier;
+	NextToken();
+	Accept(new CToken(Operator, point));
+	//если вместо пол€ идет не идентификатор
+	if (currentTokenPtr->type != Identifier)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Expected record field");
+	//получаем тип записи
+	auto recordType = (CRecordType*)mapIdentifiers[identifierRecord];
+	auto identifierField = currentTokenPtr->identifier;
+	//если у типа записи нет пол€ с нужным именем, генерируем исключение
+	if (recordType->identifiersMap.count(identifierField) == 0)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Record field not defined");
+	auto fieldType = recordType->identifiersMap[identifierField];
+	NextToken();
+	return fieldType;
 }
 
 CType* CSyntaxAnalyzer::Expression()
@@ -483,17 +513,7 @@ CType* CSyntaxAnalyzer::Multiplier()
 	}
 
 	if (currentTokenPtr->type == Identifier)
-	{
-		//если идентификатор есть, в таблице идентификаторов, то возвращаем его тип
-		auto identifier = currentTokenPtr->identifier;
-		if (mapIdentifiers.count(identifier) != 0)
-		{
-			NextToken();
-			return mapIdentifiers[identifier];
-		}
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
-			"Identifier not defined");
-	}
+		return Variable();
 
 	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 		"Expected multiplier");

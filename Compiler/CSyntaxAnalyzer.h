@@ -84,13 +84,13 @@ class CSyntaxAnalyzer
 	/// </summary>
 	/// <param name="mapIdentifiersRecord">Таблица идентификаторов для записи</param>
 	/// <returns></returns>
-	void SectionRecord(map<string, CType*> mapIdentifiersRecord);
+	void SectionRecord(map<string, CType*>& mapIdentifiersRecord);
 	/// <summary>
 	/// 
 	/// </summary>
 	/// <param name="mapIdentifiersRecord">Таблица идентификаторов для записи</param>
 	/// <returns></returns>
-	string NameField(map<string, CType*> mapIdentifiersRecord);
+	string NameField(map<string, CType*>& mapIdentifiersRecord);
 	/// <summary>
 	/// раздел операторов
 	/// </summary>
@@ -139,6 +139,16 @@ class CSyntaxAnalyzer
 	/// переменная
 	/// </summary>
 	CType* Variable();
+	/// <summary>
+	/// компонента переменной
+	/// </summary>
+	/// <returns></returns>
+	CType* VariableComponent();
+	/// <summary>
+	/// обозначение поля
+	/// </summary>
+	/// <returns></returns>
+	CType* FieldDesignation();
 	/// <summary>
 	/// выражение
 	/// </summary>
