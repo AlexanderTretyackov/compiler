@@ -514,6 +514,7 @@ void CSyntaxAnalyzer::NextToken()
 {
 	//ссчитываем новый токен
 	auto nextToken = lexicalAnalyzer->GetNextToken();
+	cout << nextToken->ToString() << endl;
 	//очищаем память из под текущего токена, записываем туда новый
 	currentTokenPtr.reset(nextToken);
 }
