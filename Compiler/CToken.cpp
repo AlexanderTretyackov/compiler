@@ -55,7 +55,8 @@ const string operatorsStr[55] =
 	"writeln",
 	"type",
 	"with",
-	"of"
+	"of",
+	"record"
 };
 
 CToken::CToken(ETokenType tokenType, CVariant* _variant)
