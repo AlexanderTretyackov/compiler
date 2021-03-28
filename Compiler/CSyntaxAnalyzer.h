@@ -76,6 +76,22 @@ class CSyntaxAnalyzer
 	/// <returns></returns>
 	CType* CombinedType();
 	/// <summary>
+	/// список полей
+	/// </summary>
+	map<string, CType*> ListFields();
+	/// <summary>
+	/// секция записи
+	/// </summary>
+	/// <param name="mapIdentifiersRecord">Таблица идентификаторов для записи</param>
+	/// <returns></returns>
+	void SectionRecord(map<string, CType*> mapIdentifiersRecord);
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="mapIdentifiersRecord">Таблица идентификаторов для записи</param>
+	/// <returns></returns>
+	string NameField(map<string, CType*> mapIdentifiersRecord);
+	/// <summary>
 	/// раздел операторов
 	/// </summary>
 	void BlockOperators();

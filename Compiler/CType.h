@@ -20,7 +20,7 @@ namespace types
 	};
 	typedef std::unique_ptr<CType> CTypePtr;
 
-	class CRecordType : CType {
+	class CRecordType : public CType {
 	public:
 		CRecordType(EType type, string name, map<string, CType*> identifiersMap);
 		string name;

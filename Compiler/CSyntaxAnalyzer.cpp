@@ -45,9 +45,11 @@ void CSyntaxAnalyzer::BlockTypes()
 	Accept(new CToken(Operator, _type));
 	DefinitionType();
 	Accept(new CToken(Operator, semicolon));//;
-	while(currentTokenPtr->type == Identifier)
+	while (currentTokenPtr->type == Identifier)
+	{
 		DefinitionType();
 		Accept(new CToken(Operator, semicolon));//;
+	}
 }
 
 void CSyntaxAnalyzer::DefinitionType()
@@ -55,6 +57,11 @@ void CSyntaxAnalyzer::DefinitionType()
 	auto ident = Name();
 	Accept(new CToken(Operator, compiler::equal));//=
 	auto type = Type();
+	//если тип с таким именем уже есть, то генерируем исключение
+	if (mapTypes.count(ident) != 0)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Type with that name already exist");
+	mapTypes[ident] = type;
 }
 
 /// <summary>
@@ -119,7 +126,8 @@ void CSyntaxAnalyzer::DefinitionVariables()
 
 CType* CSyntaxAnalyzer::Type()
 {
-	if (currentTokenPtr->type == Identifier && currentTokenPtr->identifier == "record")
+	if (currentTokenPtr->type == Operator 
+		&& currentTokenPtr->_operator == _record)
 		return CombinedType();
 	return SimpleType();
 }
@@ -144,7 +152,81 @@ CType* CSyntaxAnalyzer::SimpleType()
 
 CType* CSyntaxAnalyzer::CombinedType()
 {
-	return nullptr;
+	Accept(new CToken(Operator, _record));
+	//если тип без полей, то сразу возвращаем
+	if (currentTokenPtr->type == Operator
+		&& currentTokenPtr->_operator == _end)
+	{
+		NextToken();
+		map<string, CType*> mapFields;
+		return new CRecordType(EType::Record, "", mapFields);
+	}
+	auto mapFields = ListFields();
+	Accept(new CToken(Operator, _end));
+	return new CRecordType(EType::Record, "", mapFields);
+}
+
+map<string, CType*> CSyntaxAnalyzer::ListFields()
+{
+	map<string, CType*> mapFields;
+	SectionRecord(mapFields);
+	while (currentTokenPtr->type == Operator
+		&& currentTokenPtr->_operator == semicolon) //;
+	{
+		NextToken();
+		SectionRecord(mapFields);
+	}
+	return mapFields;
+}
+
+void CSyntaxAnalyzer::SectionRecord(map<string, CType*> mapIdentifiersRecord)
+{
+	if (currentTokenPtr->type == Operator 
+		&& currentTokenPtr->_operator == _end)
+		return;
+	//список нужен для временного хранения полей, пока не дойдем до типа полей записи
+	list<string> listFieldsRecord;
+
+	if (currentTokenPtr->type == Identifier)
+	{
+		auto nameFiledRecord = NameField(mapIdentifiersRecord);
+		//записываем в временный список новый идентификатор поля записи
+		listFieldsRecord.push_back(nameFiledRecord);
+	}
+	while(currentTokenPtr->type == Operator 
+		&& currentTokenPtr->_operator == comma)
+	{
+		NextToken();
+		auto nameFiledRecord = NameField(mapIdentifiersRecord);
+		// записываем в временный список новый идентификатор поля записи
+		listFieldsRecord.push_back(nameFiledRecord);
+	}
+
+	Accept(new CToken(Operator, colon)); //:
+
+	auto typeFields = Type();
+
+	//указываем тип у добавленных идентификаторов
+	for (auto iterator = listFieldsRecord.begin(); iterator != listFieldsRecord.end(); iterator++)
+	{
+		auto nameFieldRecord = *iterator;
+		mapIdentifiersRecord[nameFieldRecord] = typeFields;
+	}
+}
+
+string CSyntaxAnalyzer::NameField(map<string, CType*> mapIdentifiersRecord)
+{
+	auto identifier = currentTokenPtr->identifier;
+	//если такой идентификатор не объявлен
+	if (mapIdentifiersRecord.count(identifier) == 0)
+	{
+		NextToken();
+		//записываем в таблицу идентификаторов новый идентификатор пока без типа
+		mapIdentifiersRecord[identifier] = nullptr;
+		return identifier;
+	}
+	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		"Identifier with same name already defined");
 }
 
 void CSyntaxAnalyzer::BlockOperators()
@@ -239,6 +321,9 @@ void CSyntaxAnalyzer::CompountOperator()
 	while (currentTokenPtr->type == Operator && currentTokenPtr->_operator == semicolon)
 	{
 		NextToken();
+		if (currentTokenPtr->type == Operator
+			&& currentTokenPtr->_operator == _end)
+			break;
 		_Operator();
 	}
 	Accept(new CToken(Operator, _end));
