@@ -260,6 +260,9 @@ void CSyntaxAnalyzer::ComplexOperator()
 			case _if: IfOperator(); return;
 			case _case: CaseOperator(); return;
 			case _with: WithOperator(); return;
+			default:
+				throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+					"Expected operator");
 		}
 	}
 }
