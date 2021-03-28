@@ -98,7 +98,7 @@ void CSyntaxAnalyzer::DefinitionVariables()
 	{
 		NextToken();
 		newVariableIdentifier = Name();
-		if (mapIdentifiers.count(newVariableIdentifier) != 0);
+		if (mapIdentifiers.count(newVariableIdentifier) != 0)
 			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 				"Identifier already exist");
 		//записываем в временный список новый идентификатор
@@ -171,13 +171,49 @@ void CSyntaxAnalyzer::IfOperator()
 void CSyntaxAnalyzer::CaseOperator()
 {
 	Accept(new CToken(Operator, _case));
-	auto typeExpression = Expression();
+	auto typeCaseExpression = Expression();
 	//case поддерживает только типы integer и char
-	if (typeExpression != typeInteger || typeExpression != typeChar)
+	if (typeCaseExpression != typeInteger && typeCaseExpression != typeChar)
 		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Expected integer or char type expression");
 	Accept(new CToken(Operator, _of));
 
+	//если текущий токен константа integer или char, то разбираем как элемент списка вариантов
+	if (currentTokenPtr->type == Value &&
+		(currentTokenPtr->variantPtr->type == Integer ||
+			currentTokenPtr->variantPtr->type == Char))
+	{
+		//если тип выражения case не совпадает с типом элемента списка вариантов
+		if(typeCaseExpression != CaseListItem())
+			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+				"Type of case expression doesn't match type label");
+	}
+
+	while(currentTokenPtr->type == Operator && 
+		currentTokenPtr->_operator == semicolon)
+	{
+		NextToken();
+		//если текущий токен константа integer или char, то разбираем как элемент списка вариантов
+		if (currentTokenPtr->type == Value &&
+			(currentTokenPtr->variantPtr->type == Integer ||
+				currentTokenPtr->variantPtr->type == Char))
+		{
+			//если тип выражения case не совпадает с типом элемента списка вариантов
+			if (typeCaseExpression != CaseListItem())
+				throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+					"Type of case expression doesn't match type label");
+		}
+	}
+
+	//если case закончился
+	if (currentTokenPtr->type == Operator && currentTokenPtr->_operator == _end)
+	{
+		NextToken();
+		return;
+	}
+
+	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		"Expected integer or char constant or end operator");
 }
 
 void CSyntaxAnalyzer::WithOperator()
@@ -345,6 +381,19 @@ CType* CSyntaxAnalyzer::Multiplier()
 		return NumberWithoutSign();
 	}
 
+	if (currentTokenPtr->type == Identifier)
+	{
+		//если идентификатор есть, в таблице идентификаторов, то возвращаем его тип
+		auto identifier = currentTokenPtr->identifier;
+		if (mapIdentifiers.count(identifier) != 0)
+		{
+			NextToken();
+			return mapIdentifiers[identifier];
+		}
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Identifier not defined");
+	}
+
 	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 		"Expected multiplier");
 }
@@ -410,6 +459,43 @@ CType* CSyntaxAnalyzer::NumberWithoutSign()
 			return typeInteger;
 	}
 	throw SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), "Expected NumberWithoutSign");
+}
+
+CType* CSyntaxAnalyzer::CaseListItem()
+{
+	//список меток варианта
+	auto typeLabels = CaseListLabels();
+	Accept(new CToken(Operator, colon));
+	if (currentTokenPtr->type == Value)
+	{
+		if (currentTokenPtr->variantPtr->type != Integer &&
+			currentTokenPtr->variantPtr->type != Char)
+			throw SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+				"Expected different type constant");
+		return typeLabels;
+	}
+	_Operator();
+	return typeLabels;
+}
+
+CType* CSyntaxAnalyzer::CaseListLabels()
+{
+	auto typeCaseLabel = CaseLabel();
+	while (currentTokenPtr->type == Operator &&
+		currentTokenPtr->_operator == comma)
+	{
+		NextToken();
+		auto typeCaseLabelNext = CaseLabel();
+		if(typeCaseLabel != typeCaseLabelNext)
+			throw SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+				"case labels have different types");
+	}
+	return typeCaseLabel;
+}
+
+CType* CSyntaxAnalyzer::CaseLabel()
+{
+	return Constant();
 }
 
 void CSyntaxAnalyzer::Accept(CToken* targetToken)

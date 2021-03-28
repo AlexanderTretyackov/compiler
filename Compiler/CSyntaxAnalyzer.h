@@ -153,6 +153,21 @@ class CSyntaxAnalyzer
 	/// </summary>
 	CType* NumberWithoutSign();
 	/// <summary>
+	/// элемент списка вариантов
+	/// </summary>
+	/// <returns></returns>
+	CType* CaseListItem();
+	/// <summary>
+	/// список меток варианта
+	/// </summary>
+	/// <returns></returns>
+	CType* CaseListLabels();
+	/// <summary>
+	/// метка варианта
+	/// </summary>
+	/// <returns></returns>
+	CType* CaseLabel();
+	/// <summary>
 	/// Проверяет соответсвие текущего токена целевому
 	/// </summary>
 	/// <param name="token"></param>
