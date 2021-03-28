@@ -27,3 +27,8 @@ string SyntaxException::ToString()
 		to_string(numberLine) + "," + to_string(numberLiter) +
 		".Description: " + exception::what();
 }
+
+string SyntaxException::Print()
+{
+	cout << ToString() << endl;
+}
