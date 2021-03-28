@@ -92,6 +92,10 @@ class CSyntaxAnalyzer
 	/// </summary>
 	void WithOperator();
 	/// <summary>
+	/// цикл с предусловием
+	/// </summary>
+	void WhileOperator();
+	/// <summary>
 	/// составной оператор
 	/// </summary>
 	void CompountOperator();

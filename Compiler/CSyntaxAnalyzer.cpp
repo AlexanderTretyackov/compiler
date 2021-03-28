@@ -218,6 +218,18 @@ void CSyntaxAnalyzer::CaseOperator()
 
 void CSyntaxAnalyzer::WithOperator()
 {
+	Accept(new CToken(Operator, _with));
+}
+
+void CSyntaxAnalyzer::WhileOperator()
+{
+	Accept(new CToken(Operator, _while));
+	auto typeExpression = Expression();
+	if(typeExpression != typeBoolean)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Expected boolean expression");
+	Accept(new CToken(Operator, _do));
+	_Operator();
 }
 
 void CSyntaxAnalyzer::CompountOperator()
@@ -260,6 +272,7 @@ void CSyntaxAnalyzer::ComplexOperator()
 			case _if: IfOperator(); return;
 			case _case: CaseOperator(); return;
 			case _with: WithOperator(); return;
+			case _while: WhileOperator(); return;
 			default:
 				throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 					"Expected operator");
