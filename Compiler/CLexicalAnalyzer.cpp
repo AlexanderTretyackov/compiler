@@ -54,6 +54,16 @@ int CLexicalAnalyzer::GetNumberChar()
 	return numberCurrentLiter;
 }
 
+int CLexicalAnalyzer::GetNumberLineStartToken()
+{
+	return numberLineStartToken;
+}
+
+int CLexicalAnalyzer::GetNumberCharStartToken()
+{
+	return numberLiterStartToken;
+}
+
 bool CLexicalAnalyzer::IsInteger(string numberString, int& value)
 {
 	try {
@@ -130,6 +140,8 @@ void CLexicalAnalyzer::SkipWhitespaces()
 
 CToken* CLexicalAnalyzer::GetNextToken()
 {
+	numberLineStartToken = numberCurrentLine;
+	numberLiterStartToken = numberCurrentLiter;
 	//пропускаем пробельные символы
 	SkipWhitespaces();
 

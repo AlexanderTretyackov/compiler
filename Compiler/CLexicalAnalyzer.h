@@ -17,6 +17,7 @@ private:
 	ifstream inputStream;
 	string line = "";
 	int numberCurrentLine, numberCurrentLiter;
+	int numberLineStartToken, numberLiterStartToken;
 	char currentChar;
 	bool IsInteger(string numberString, int& value);
 	bool IsDouble(string numberString, double& value);
@@ -40,6 +41,16 @@ private:
 public:
 	int GetNumberLine();
 	int GetNumberChar();
+	/// <summary>
+	/// Получить номер строки, в которой начинается токен
+	/// </summary>
+	/// <returns></returns>
+	int GetNumberLineStartToken();
+	/// <summary>
+	/// Получить номер литеры в строке, с которой начинается токен
+	/// </summary>
+	/// <returns></returns>
+	int GetNumberCharStartToken();
 	CLexicalAnalyzer(string fileName);
 	/// <summary>
 	/// Отдает следующий токен наружу
