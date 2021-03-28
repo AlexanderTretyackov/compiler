@@ -18,5 +18,5 @@ class SyntaxException : exception
 public:
 	SyntaxException(int _numberLine, int _numberLiter, const char* errorDescription);
 	string ToString();
-	string Print();
+	void Print();
 };

@@ -28,7 +28,7 @@ string SyntaxException::ToString()
 		".Description: " + exception::what();
 }
 
-string SyntaxException::Print()
+void SyntaxException::Print()
 {
 	cout << ToString() << endl;
 }
