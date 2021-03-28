@@ -301,6 +301,20 @@ void CSyntaxAnalyzer::CaseOperator()
 void CSyntaxAnalyzer::WithOperator()
 {
 	Accept(new CToken(Operator, _with));
+	if (currentTokenPtr->type != Identifier)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Expected record variable");
+
+	//если такой идентификатор не объявлен, генерируем исключение
+	if (mapIdentifiers.count(currentTokenPtr->identifier) == 0)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Record variable not defined");
+
+	auto identifierRecordType = mapIdentifiers[currentTokenPtr->identifier];
+	//если идентификатор не record, генерируем исключение
+	if(identifierRecordType->type != EType::Record)
+		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Expected record variable");
 }
 
 void CSyntaxAnalyzer::WhileOperator()
