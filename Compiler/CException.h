@@ -19,4 +19,5 @@ public:
 	SyntaxException(int _numberLine, int _numberLiter, const char* errorDescription);
 	string ToString();
 	void Print();
+	const char* GetErrorDescription();
 };

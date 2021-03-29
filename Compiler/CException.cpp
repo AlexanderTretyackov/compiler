@@ -32,3 +32,8 @@ void SyntaxException::Print()
 {
 	cout << ToString() << endl;
 }
+
+const char* SyntaxException::GetErrorDescription()
+{
+	return exception::what();
+}
