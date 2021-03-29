@@ -44,6 +44,14 @@ const map<string, int> keywordsMap =
 		{"record", compiler::_record}
 	};
 
+bool CLexicalAnalyzer::IsBelong(EOperator findingOperator, list<EOperator> operators)
+{
+	for (auto iterator = operators.begin(); iterator != operators.end(); iterator++)
+		if (*iterator == findingOperator)
+			return true;
+	return false;
+}
+
 int CLexicalAnalyzer::GetNumberLine()
 {
 	return numberCurrentLine;
@@ -353,5 +361,26 @@ bool CLexicalAnalyzer::SkipToToken(CToken* token)
 			//cout << e.ToString() << '\n';
 		}
 	} 
+	return true;
+}
+
+bool CLexicalAnalyzer::SkipToOperators(list<EOperator> operators)
+{
+	CTokenPtr currentTokenPtr(nullptr);
+	currentTokenPtr.reset(GetNextToken());
+	while (IsBelong(currentTokenPtr->_operator, operators))
+	{
+		try {
+			currentTokenPtr.reset(GetNextToken());
+			//если дошли до конца файла
+			if (currentTokenPtr->type == Eof)
+				return false;
+			//cout << currentTokenPtr->ToString();
+		}
+		catch (LexicalException& e)
+		{
+			//cout << e.ToString() << '\n';
+		}
+	}
 	return true;
 }
