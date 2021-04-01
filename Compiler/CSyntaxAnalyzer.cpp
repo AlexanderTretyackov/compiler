@@ -2,8 +2,16 @@
 #include "CLexicalAnalyzer.h"
 #include "CException.h"
 #include <list>
-
+#include <cstdlib>
 using namespace types;
+
+template<class T> inline
+std::list<T> operator+(const std::list<T>& first, const std::list<T>& second)
+{
+	std::list<T> newList(first.cbegin(), first.cend());
+	newList.insert(newList.end(), second.cbegin(), second.cend());
+	return newList;
+}
 
 CSyntaxAnalyzer::CSyntaxAnalyzer(string fileName)
 {
@@ -21,9 +29,22 @@ void CSyntaxAnalyzer::Analyze()
 /// </summary>
 void CSyntaxAnalyzer::Program()
 {
-	Accept(new CToken(Operator, _program));
-	Name();
-	Accept(new CToken(Operator, semicolon));// ;
+	try
+	{
+		Accept(new CToken(Operator, _program));
+		Name();
+	}
+	catch (CompilerException)
+	{
+		SkipToOperators({ semicolon, _type, _var, _begin });
+	}
+	try {
+		Accept(new CToken(Operator, semicolon));// ;
+	}
+	catch (SyntaxException)
+	{
+		SkipToOperators({ _type, _var, _begin });
+	}
 	Block();
 }
 
@@ -43,79 +64,103 @@ void CSyntaxAnalyzer::Block()
 void CSyntaxAnalyzer::BlockTypes()
 {
 	Accept(new CToken(Operator, _type));
-	DefinitionType();
-	Accept(new CToken(Operator, semicolon));//;
+	
 	while (currentTokenPtr->type == Identifier)
 	{
-		DefinitionType();
+		DefinitionType({ semicolon, _var, _begin });
 		Accept(new CToken(Operator, semicolon));//;
 	}
+	
+	//if (SkipToOperators(followersBlockTypes));
+	//{
+	//	switch (currentTokenPtr->_operator)
+	//	{
+	//		case _var: BlockVariables();
+	//			if (currentTokenPtr->type == Operator && currentTokenPtr->_operator == _begin)
+	//				BlockOperators();
+	//			return;
+	//		case _begin: BlockOperators(); return;
+	//	}
+	//	return;
+	//}
 }
 
-void CSyntaxAnalyzer::DefinitionType()
+void CSyntaxAnalyzer::DefinitionType(list<EOperator> followers)
 {
-	auto ident = Name();
-	Accept(new CToken(Operator, compiler::equal));//=
-	auto type = Type();
-	//если тип с таким именем уже есть, то генерируем исключение
-	if (mapTypes.count(ident) != 0)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
-			"Type with that name already exist");
-	mapTypes[ident] = type;
-}
-
-/// <summary>
-/// раздел констант
-/// </summary>
-void CSyntaxAnalyzer::BlockConstants()
-{
-	if (currentTokenPtr->type == Operator && currentTokenPtr->_operator == _const)
-	{
-
+	string ident;
+	CType* type;
+	try {
+		ident = Name();
+		Accept(new CToken(Operator, compiler::equal));//=
+		type = Type(followers);
+		//если тип с таким именем уже есть, то генерируем исключение
+		if (mapTypes.count(ident) != 0)
+			PrintExceptionMessage(Semantic,
+				lexicalAnalyzer->GetNumberLineStartToken(), lexicalAnalyzer->GetNumberCharStartToken(),
+				"Type with that name already exist");
+		else
+			mapTypes[ident] = type;
 	}
-}
-
-void CSyntaxAnalyzer::DefinitionConstant()
-{
-	Name();
-	Accept(new CToken(Operator, compiler::equal));
-	Constant();
+	catch (CompilerException)
+	{
+		SkipToOperators(followers);
+	}
 }
 
 void CSyntaxAnalyzer::BlockVariables()
 {
 	Accept(new CToken(Operator, _var));
-	while(currentTokenPtr->type == Identifier)
-		DefinitionVariables();
+	
+	while (currentTokenPtr->type == Identifier)
+	{
+		DefinitionVariables({ semicolon, _begin });
+		try {
+			Accept(new CToken(Operator, semicolon));//;
+		}
+		catch (CompilerException)
+		{
+			SkipToOperators({ _begin });
+		}
+	}
 }
 
-void CSyntaxAnalyzer::DefinitionVariables()
+void CSyntaxAnalyzer::DefinitionVariables(list<EOperator> followers)
 {
 	//список нужен для временного хранения идентификаторов, пока не дойдем до типа объявленных переменных
 	list<string> listNewVariablesIdentifiers;
 	//идентификатор новой переменной
 	auto newVariableIdentifier = Name();
-	//если переменная с таким идентификатором уже содержится в области видимости, то кидаем исключение
+	//если переменная с таким идентификатором уже содержится в области видимости, то пишем ошибку
 	if (mapIdentifiers.count(newVariableIdentifier) != 0)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		PrintExceptionMessage(Semantic,
+			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Identifier already exist");
-	//записываем в временный список новый идентификатор
-	listNewVariablesIdentifiers.push_back(newVariableIdentifier);
+	else
+	{
+		//записываем в временный список новый идентификатор
+		listNewVariablesIdentifiers.push_back(newVariableIdentifier);
+		//записываем в таблицу идентификаторов новый идентификатор пока без типа
+		mapIdentifiers[newVariableIdentifier] = nullptr;
+	}
+
 	while(currentTokenPtr->type == Operator && currentTokenPtr->_operator == comma)//,
 	{
 		NextToken();
 		newVariableIdentifier = Name();
 		if (mapIdentifiers.count(newVariableIdentifier) != 0)
-			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			PrintExceptionMessage(Semantic,
+				lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 				"Identifier already exist");
-		//записываем в временный список новый идентификатор
-		listNewVariablesIdentifiers.push_back(newVariableIdentifier);
-		//записываем в таблицу идентификаторов новые идентификаторы пока без типа
-		mapIdentifiers[newVariableIdentifier] = nullptr;
+		else
+		{
+			//записываем в временный список новый идентификатор
+			listNewVariablesIdentifiers.push_back(newVariableIdentifier);
+			//записываем в таблицу идентификаторов новые идентификаторы пока без типа
+			mapIdentifiers[newVariableIdentifier] = nullptr;
+		}
 	}
 	Accept(new CToken(Operator, colon));//:
-	auto typeVariables = Type();
-	Accept(new CToken(Operator, semicolon));//;
+	auto typeVariables = Type(followers);////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//указываем тип у добавленных идентификаторов
 	for (auto iterator = listNewVariablesIdentifiers.begin(); iterator != listNewVariablesIdentifiers.end(); iterator++) 
 	{
@@ -124,12 +169,21 @@ void CSyntaxAnalyzer::DefinitionVariables()
 	}
 }
 
-CType* CSyntaxAnalyzer::Type()
+CType* CSyntaxAnalyzer::Type(list<EOperator> followers)
 {
-	if (currentTokenPtr->type == Operator 
-		&& currentTokenPtr->_operator == _record)
-		return CombinedType();
-	return SimpleType();
+	CType* type = nullptr;
+	try {
+		if (currentTokenPtr->type == Operator
+			&& currentTokenPtr->_operator == _record)
+			type = CombinedType(followers);
+		else
+			type = SimpleType();
+	}
+	catch (CompilerException)
+	{
+		SkipToOperators(followers);
+	}
+	return type;
 }
 
 CType* CSyntaxAnalyzer::SimpleType()
@@ -137,20 +191,24 @@ CType* CSyntaxAnalyzer::SimpleType()
 	if (currentTokenPtr->type == Identifier)
 	{
 		auto identifier = currentTokenPtr->identifier;
+		NextToken();
 		//если тип есть, то возвращаем его, иначе кидаем исключение
 		if (mapTypes.count(identifier) != 0)
 		{
-			NextToken();
 			return mapTypes[identifier];
 		}
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		PrintExceptionMessage(Semantic,
+			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Type not defined");
+		throw CompilerException();
 	}
-	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+	PrintExceptionMessage(Syntax,
+		lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 		"Expected type identifier");
+	throw CompilerException();
 }
 
-CType* CSyntaxAnalyzer::CombinedType()
+CType* CSyntaxAnalyzer::CombinedType(list<EOperator> followers)
 {
 	Accept(new CToken(Operator, _record));
 	//если тип без полей, то сразу возвращаем
@@ -161,27 +219,37 @@ CType* CSyntaxAnalyzer::CombinedType()
 		map<string, CType*> mapFields;
 		return new CRecordType(EType::Record, "", mapFields);
 	}
-	auto mapFields = ListFields();
+	list<EOperator> additionalFollowers = {_end};
+	auto mapFields = ListFields(followers + additionalFollowers);
 	Accept(new CToken(Operator, _end));
 	return new CRecordType(EType::Record, "", mapFields);
 }
 
-map<string, CType*> CSyntaxAnalyzer::ListFields()
+map<string, CType*> CSyntaxAnalyzer::ListFields(list<EOperator> followers)
 {
+	list<EOperator> addFollowers = { semicolon };
 	map<string, CType*> mapFields;
-	SectionRecord(mapFields);
+	try {
+
+		SectionRecord(mapFields, followers);
+	}
+	catch (CompilerException)
+	{
+		
+		SkipToOperators(followers + addFollowers);
+	}
 	while (currentTokenPtr->type == Operator
 		&& currentTokenPtr->_operator == semicolon) //;
 	{
 		NextToken();
-		SectionRecord(mapFields);
+		SectionRecord(mapFields, followers + addFollowers);
 	}
 	return mapFields;
 }
 
-void CSyntaxAnalyzer::SectionRecord(map<string, CType*>& mapIdentifiersRecord)
+void CSyntaxAnalyzer::SectionRecord(map<string, CType*>& mapIdentifiersRecord, list<EOperator> followers)
 {
-	if (currentTokenPtr->type == Operator 
+	if (currentTokenPtr->type == Operator
 		&& currentTokenPtr->_operator == _end)
 		return;
 	//список нужен для временного хранения полей, пока не дойдем до типа полей записи
@@ -189,22 +257,45 @@ void CSyntaxAnalyzer::SectionRecord(map<string, CType*>& mapIdentifiersRecord)
 
 	if (currentTokenPtr->type == Identifier)
 	{
-		auto nameFiledRecord = NameField(mapIdentifiersRecord);
-		//записываем в временный список новый идентификатор поля записи
-		listFieldsRecord.push_back(nameFiledRecord);
+		auto nameFiledRecord = NameField();
+		//если такой идентификатор не объявлен
+		if (mapIdentifiersRecord.count(nameFiledRecord) == 0)
+		{
+			NextToken();
+			//записываем в таблицу идентификаторов новый идентификатор пока без типа
+			mapIdentifiersRecord[nameFiledRecord] = nullptr;
+			//записываем в временный список новый идентификатор поля записи
+			listFieldsRecord.push_back(nameFiledRecord);
+		}
+		else
+			PrintExceptionMessage(Semantic,
+				lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+				"Identifier with same name already defined");
 	}
-	while(currentTokenPtr->type == Operator 
+
+	while (currentTokenPtr->type == Operator
 		&& currentTokenPtr->_operator == comma)
 	{
 		NextToken();
-		auto nameFiledRecord = NameField(mapIdentifiersRecord);
-		// записываем в временный список новый идентификатор поля записи
-		listFieldsRecord.push_back(nameFiledRecord);
+		auto nameFiledRecord = NameField();
+		//если такой идентификатор не объявлен
+		if (mapIdentifiersRecord.count(nameFiledRecord) == 0)
+		{
+			NextToken();
+			//записываем в таблицу идентификаторов новый идентификатор пока без типа
+			mapIdentifiersRecord[nameFiledRecord] = nullptr;
+			//записываем в временный список новый идентификатор поля записи
+			listFieldsRecord.push_back(nameFiledRecord);
+		}
+		else
+			PrintExceptionMessage(Semantic,
+				lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+				"Identifier with same name already defined");
 	}
 
 	Accept(new CToken(Operator, colon)); //:
 
-	auto typeFields = Type();
+	auto typeFields = Type(followers);
 
 	//указываем тип у добавленных идентификаторов
 	for (auto iterator = listFieldsRecord.begin(); iterator != listFieldsRecord.end(); iterator++)
@@ -214,49 +305,49 @@ void CSyntaxAnalyzer::SectionRecord(map<string, CType*>& mapIdentifiersRecord)
 	}
 }
 
-string CSyntaxAnalyzer::NameField(map<string, CType*>& mapIdentifiersRecord)
+string CSyntaxAnalyzer::NameField()
 {
 	auto identifier = currentTokenPtr->identifier;
-	//если такой идентификатор не объявлен
-	if (mapIdentifiersRecord.count(identifier) == 0)
-	{
-		NextToken();
-		//записываем в таблицу идентификаторов новый идентификатор пока без типа
-		mapIdentifiersRecord[identifier] = nullptr;
-		return identifier;
-	}
-	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
-		"Identifier with same name already defined");
+
+	NextToken();
+		
+	return identifier;
 }
 
 void CSyntaxAnalyzer::BlockOperators()
 {
-	CompountOperator();
+	CompountOperator({_eof});
 }
 
-void CSyntaxAnalyzer::IfOperator()
+void CSyntaxAnalyzer::IfOperator(list<EOperator> followers)
 {
 	Accept(new CToken(Operator, _if));
-	auto typeExpression = Expression();
-	if(typeExpression != typeBoolean)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
-			"Expected boolean type expression");
+	list<EOperator> additionalFollowers = { _then, _else };
+	auto typeExpression = Expression(followers + additionalFollowers);
+	if(typeExpression != typeBoolean && typeExpression != nullptr)
+		PrintExceptionMessage(Semantic,
+			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			"Expected boolean expression");
 	Accept(new CToken(Operator, _then));
-	_Operator();
+	list<EOperator> addFollowers = { _else };
+	_Operator(followers + addFollowers);
 	if (currentTokenPtr->type == Operator && currentTokenPtr->_operator == _else)
 	{
 		NextToken();
-		_Operator();
+		_Operator(followers);
 	}
 }
 
-void CSyntaxAnalyzer::CaseOperator()
+void CSyntaxAnalyzer::CaseOperator(list<EOperator> followers)
 {
 	Accept(new CToken(Operator, _case));
-	auto typeCaseExpression = Expression();
+	list<EOperator> additionalFollowers = { _of };
+	auto typeCaseExpression = Expression(followers + additionalFollowers);
 	//case поддерживает только типы integer и char
-	if (typeCaseExpression != typeInteger && typeCaseExpression != typeChar)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+	if (typeCaseExpression != typeInteger && typeCaseExpression != typeChar 
+		&& typeCaseExpression != nullptr)
+		PrintExceptionMessage(Semantic,
+			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Expected integer or char type expression");
 	Accept(new CToken(Operator, _of));
 
@@ -265,9 +356,12 @@ void CSyntaxAnalyzer::CaseOperator()
 		(currentTokenPtr->variantPtr->type == Integer ||
 			currentTokenPtr->variantPtr->type == Char))
 	{
+		list<EOperator> addFollowers = { semicolon, _end };
+		auto typeCaseListItem = CaseListItem(followers + addFollowers);
 		//если тип выражения case не совпадает с типом элемента списка вариантов
-		if(typeCaseExpression != CaseListItem())
-			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		if (typeCaseExpression != nullptr && typeCaseListItem != nullptr &&
+			typeCaseExpression != typeCaseListItem)
+			PrintExceptionMessage(Semantic, lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 				"Type of case expression doesn't match type label");
 	}
 
@@ -280,22 +374,23 @@ void CSyntaxAnalyzer::CaseOperator()
 			(currentTokenPtr->variantPtr->type == Integer ||
 				currentTokenPtr->variantPtr->type == Char))
 		{
+			list<EOperator> addFollowers = { _end };
+			auto typeCaseListItem = CaseListItem(followers + addFollowers);
 			//если тип выражения case не совпадает с типом элемента списка вариантов
-			if (typeCaseExpression != CaseListItem())
-				throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			if (typeCaseExpression != nullptr && typeCaseListItem != nullptr &&
+				typeCaseExpression != typeCaseListItem)
+				PrintExceptionMessage(Semantic, lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 					"Type of case expression doesn't match type label");
 		}
 	}
-
-	//если case закончился
-	if (currentTokenPtr->type == Operator && currentTokenPtr->_operator == _end)
+	try 
 	{
-		NextToken();
-		return;
+		Accept(new CToken(Operator, _end));
 	}
-
-	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
-		"Expected integer or char constant or end operator");
+	catch (CompilerException)
+	{
+		SkipToOperators(followers);
+	}
 }
 
 void CSyntaxAnalyzer::WithOperator()
@@ -317,95 +412,131 @@ void CSyntaxAnalyzer::WithOperator()
 			"Expected record variable");
 }
 
-void CSyntaxAnalyzer::WhileOperator()
+void CSyntaxAnalyzer::WhileOperator(list<EOperator> followers)
 {
 	Accept(new CToken(Operator, _while));
-	auto typeExpression = Expression();
-	if(typeExpression != typeBoolean)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+	list<EOperator> additionalFollowers = { _do };
+	auto typeExpression = Expression(followers + additionalFollowers);
+
+	if (typeExpression != typeBoolean && typeExpression != nullptr)
+		PrintExceptionMessage(Semantic,
+			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Expected boolean expression");
 	Accept(new CToken(Operator, _do));
-	_Operator();
+	_Operator(followers);
 }
 
-void CSyntaxAnalyzer::CompountOperator()
+void CSyntaxAnalyzer::CompountOperator(list<EOperator> followers)
 {
-	Accept(new CToken(Operator, _begin));
-	_Operator();
-	while (currentTokenPtr->type == Operator && currentTokenPtr->_operator == semicolon)
-	{
-		NextToken();
-		if (currentTokenPtr->type == Operator
-			&& currentTokenPtr->_operator == _end)
-			break;
-		_Operator();
+	try {
+		Accept(new CToken(Operator, _begin));
+		list<EOperator> addFollowers = { semicolon, _end };
+		_Operator(followers + addFollowers);
+		while (currentTokenPtr->type == Operator && currentTokenPtr->_operator == semicolon)
+		{
+			NextToken();
+			if (currentTokenPtr->type == Operator
+				&& currentTokenPtr->_operator == _end)
+				break;
+			_Operator(followers);
+		}
+		Accept(new CToken(Operator, _end));
 	}
-	Accept(new CToken(Operator, _end));
+	catch (SyntaxException ex)
+	{
+		SkipToOperators(followers);
+	}
 }
 
-void CSyntaxAnalyzer::_Operator()
+void CSyntaxAnalyzer::_Operator(list<EOperator> followers)
 {
-	UnlabeledOperator();
+	UnlabeledOperator(followers);
 }
 
-void CSyntaxAnalyzer::UnlabeledOperator()
+void CSyntaxAnalyzer::UnlabeledOperator(list<EOperator> followers)
 {
 	if (currentTokenPtr->type == Identifier)
-		SimpleOperator();
+		SimpleOperator(followers);
 	else
-		ComplexOperator();
+		ComplexOperator(followers);
 }
 
-void CSyntaxAnalyzer::SimpleOperator()
+void CSyntaxAnalyzer::SimpleOperator(list<EOperator> followers)
 {
-	AssignOperator();
+	AssignOperator(followers);
 }
 
-void CSyntaxAnalyzer::ComplexOperator()
+void CSyntaxAnalyzer::ComplexOperator(list<EOperator> followers)
 {
 	if (currentTokenPtr->type == Operator)
 	{
 		switch (currentTokenPtr->_operator)
 		{
-			case _begin: CompountOperator(); return;
-			case _if: IfOperator(); return;
-			case _case: CaseOperator(); return;
+			case _begin: CompountOperator(followers); return;
+			case _if: IfOperator(followers); return;
+			case _case: CaseOperator(followers); return;
 			case _with: WithOperator(); return;
-			case _while: WhileOperator(); return;
+			case _while: WhileOperator(followers); return;
 			default:
-				throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+					PrintExceptionMessage(Syntax, 
+					lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 					"Expected operator");
+					SkipToOperators(followers);
 		}
 	}
 }
 
-void CSyntaxAnalyzer::AssignOperator()
+void CSyntaxAnalyzer::AssignOperator(list<EOperator> followers)
 {
-	auto typeVariable = Variable();
-	Accept(new CToken(Operator, assign));//:=
-	auto typeExpression = Expression();
-	if(typeVariable != typeExpression)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
-			"Types variable and expression doesn't match");
+	try {
+		list<EOperator> addFollowers = { assign };
+		auto typeVariable = Variable(followers + addFollowers);
+		Accept(new CToken(Operator, assign));//:=
+		auto typeExpression = Expression(followers);
+		if ( typeVariable != nullptr && typeExpression != nullptr &&
+			typeVariable != typeExpression)
+		{
+			PrintExceptionMessage(Semantic, lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+				"Types variable and expression doesn't match");
+		}
+	}
+	catch (CompilerException)
+	{
+		SkipToOperators(followers);
+	}
 }
 
-CType* CSyntaxAnalyzer::Variable()
+CType* CSyntaxAnalyzer::Variable(list<EOperator> followers)
 {
 	if (currentTokenPtr->type != Identifier)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
+	{
+		PrintExceptionMessage(Syntax,
+			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Expected variable");
+		throw CompilerException();
+	}
 	//если в таблице идентификаторов нет рассматриваемой переменной, то кидаем исключение
-	if(mapIdentifiers.count(currentTokenPtr->identifier) == 0)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+	if (mapIdentifiers.count(currentTokenPtr->identifier) == 0)
+	{
+		PrintExceptionMessage(Semantic, 
+			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Variable not defined");
-	//если тип переменной - запись
-	if (mapIdentifiers[currentTokenPtr->identifier]->type == EType::Record)
-		return VariableComponent();
-
-	auto identifier = currentTokenPtr->identifier;
-	NextToken();
-	//возвращаем тип переменной
-	return mapIdentifiers[identifier];
+		throw CompilerException();
+	}
+	try {
+		//если тип переменной - запись
+		if (mapIdentifiers[currentTokenPtr->identifier]->type == EType::Record)
+			return VariableComponent();
+		auto identifier = currentTokenPtr->identifier;
+		NextToken();
+		//возвращаем тип переменной
+		return mapIdentifiers[identifier];
+	}
+	catch (CompilerException)
+	{
+		SkipToOperators(followers);
+		return nullptr;
+	}
 }
 
 CType* CSyntaxAnalyzer::VariableComponent()
@@ -420,23 +551,35 @@ CType* CSyntaxAnalyzer::FieldDesignation()
 	Accept(new CToken(Operator, point));
 	//если вместо поля идет не идентификатор
 	if (currentTokenPtr->type != Identifier)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+	{
+		PrintExceptionMessage(Syntax, lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Expected record field");
+		throw CompilerException();
+	}
 	//получаем тип записи
 	auto recordType = (CRecordType*)mapIdentifiers[identifierRecord];
 	auto identifierField = currentTokenPtr->identifier;
 	//если у типа записи нет поля с нужным именем, генерируем исключение
 	if (recordType->identifiersMap.count(identifierField) == 0)
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+	{
+		PrintExceptionMessage(Semantic, 
+			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Record field not defined");
+		throw CompilerException();
+	}
+
 	auto fieldType = recordType->identifiersMap[identifierField];
 	NextToken();
 	return fieldType;
 }
 
-CType* CSyntaxAnalyzer::Expression()
+CType* CSyntaxAnalyzer::Expression(list<EOperator> followers)
 {
-	auto typeExpression = SimpleExpression();
+	list<EOperator> addFollowers =
+	{ compiler::later , compiler::greater ,
+		compiler::greaterequal, compiler::latergreater };
+
+	auto typeExpression = SimpleExpression(followers + addFollowers);
 	//если операция отношения
 	if (currentTokenPtr->type == Operator &&
 		(currentTokenPtr->_operator == later || //<
@@ -446,72 +589,104 @@ CType* CSyntaxAnalyzer::Expression()
 			currentTokenPtr->_operator == compiler::latergreater)) //<>
 	{
 		NextToken();
-		if(typeExpression != SimpleExpression())
-			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		if (typeExpression != SimpleExpression(followers))
+		{
+			PrintExceptionMessage(Semantic,
+				lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 				"Expected another expression type");
+			return nullptr;
+		}
 		//возвращаем логический тип для выражения, т.к. был оператор сравнения
 		return typeBoolean;
 	}
 	return typeExpression;
 }
 
-CType* CSyntaxAnalyzer::SimpleExpression()
+CType* CSyntaxAnalyzer::SimpleExpression(list<EOperator> followers)
 {
+	list<EOperator> addFollowers = { compiler::plus ,  compiler::minus,  compiler::_or };
 	//сохраняем тип слагаемого
-	auto typeSummand = Summand();
+	auto typeSummand = Summand(followers + addFollowers);
 	while(currentTokenPtr->type == Operator && 
 			(currentTokenPtr->_operator == compiler::plus || //+
 			currentTokenPtr->_operator == compiler::minus || //-
 			currentTokenPtr->_operator == compiler::_or)) //or
 	{
 		NextToken();
+		auto typeSummandRight = Summand(followers);
 		//если типы слагаемых не совпадают, то кидаем исключение
-		if (typeSummand != Summand())
-			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
+		if (typeSummand != nullptr && typeSummandRight != nullptr &&
+			typeSummand != typeSummandRight)
+		{
+			PrintExceptionMessage(Semantic,
+				lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 				"Expected another type");
+			return nullptr;
+		}
 	}
 	return typeSummand;
 }
 
-CType* CSyntaxAnalyzer::Summand()
+CType* CSyntaxAnalyzer::Summand(list<EOperator> followers)
 {
-	//сохраняем тип множителя
-	auto typeMultiplier = Multiplier();
+	list<EOperator> addFollowers = { compiler::star , compiler::slash , 
+		compiler::_div ,compiler::_mod , compiler::_and };
+	try {
+		//сохраняем тип множителя
+		auto typeMultiplier = Multiplier(followers + addFollowers);
 
-	while (currentTokenPtr->type == Operator &&
-		(currentTokenPtr->_operator == compiler::star || //*
-			currentTokenPtr->_operator == compiler::slash || ///
-			currentTokenPtr->_operator == compiler::_div ||
-			currentTokenPtr->_operator == compiler::_mod ||
-			currentTokenPtr->_operator == compiler::_and))
-	{
-		NextToken();
-		//если типы множителей не совпадают, то кидаем исключение
-		if (typeMultiplier != Multiplier())
-			throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
-				"Expected another type");
+		while (currentTokenPtr->type == Operator &&
+			(currentTokenPtr->_operator == compiler::star || //*
+				currentTokenPtr->_operator == compiler::slash || ///
+				currentTokenPtr->_operator == compiler::_div ||
+				currentTokenPtr->_operator == compiler::_mod ||
+				currentTokenPtr->_operator == compiler::_and))
+		{
+			NextToken();
+			auto typeMultiplierRight = Multiplier(followers);
+			//если типы множителей не совпадают, то кидаем исключение
+			if (typeMultiplier != nullptr && typeMultiplierRight != nullptr &&
+				typeMultiplier != typeMultiplierRight)
+			{
+				PrintExceptionMessage(Semantic,
+					lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+					"Expected another type");
+				return nullptr;
+			}
+		}
+		return typeMultiplier;
 	}
-	return typeMultiplier;
+	catch (CompilerException)
+	{
+		SkipToOperators(followers);
+		return nullptr;
+	}
 }
 
-CType* CSyntaxAnalyzer::Multiplier()
+CType* CSyntaxAnalyzer::Multiplier(list<EOperator> followers)
 {
 	if (currentTokenPtr->type == Operator)
 	{
 		if (currentTokenPtr->_operator == leftpar)//(
 		{
 			NextToken();
-			auto typeExpression = Expression();
+			list<EOperator> addFollowers = { rightpar };
+			auto typeExpression = Expression(addFollowers);
 			Accept(new CToken(Operator, rightpar));//)
 			return typeExpression;
 		}
 		if (currentTokenPtr->_operator == _not)
 		{
 			NextToken();
-			auto typeMultiplier = Expression();
-			if(typeMultiplier != typeBoolean)
-				throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+			auto typeMultiplier = Expression(followers);
+			if (typeMultiplier != nullptr &&
+				typeMultiplier != typeBoolean)
+			{
+				PrintExceptionMessage(Semantic,
+					lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 					"Expected boolean type multiplier");
+				return nullptr;
+			}
 			return typeMultiplier;
 		}
 	}
@@ -527,28 +702,37 @@ CType* CSyntaxAnalyzer::Multiplier()
 	}
 
 	if (currentTokenPtr->type == Identifier)
-		return Variable();
+		return Variable(followers);
 
-	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+	PrintExceptionMessage(Syntax,
+		lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 		"Expected multiplier");
+	throw CompilerException();
 }
 
 string CSyntaxAnalyzer::Name()
 {
+
 	if (currentTokenPtr->type == Identifier)
 	{
 		auto identifier = currentTokenPtr->identifier;
-		//если такой идентификатор не объявлен
-		if (mapIdentifiers.count(identifier) == 0)
-		{
-			NextToken();
-			return identifier;
-		}
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
-			"Identifier with same name already defined");
+		NextToken();
+		return identifier;
+		////если такой идентификатор не объявлен
+		//if (mapIdentifiers.count(identifier) == 0)
+		//{
+		//	NextToken();
+		//	return identifier;
+		//}
+		//PrintExceptionMessage(Semantic,
+		//	lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		//	"Identifier with same name already defined");
+		//throw CompilerException();
 	}
-	throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
+	PrintExceptionMessage(Syntax,
+		lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 		"Expected identifier");
+	throw CompilerException();
 }
 
 void CSyntaxAnalyzer::FileName()
@@ -556,29 +740,37 @@ void CSyntaxAnalyzer::FileName()
 	Name();
 }
 
-CType* CSyntaxAnalyzer::Constant()
+CType* CSyntaxAnalyzer::Constant(list<EOperator> followers)
 {
-	if (currentTokenPtr->type == Value)
-	{
-		auto typeVariant = currentTokenPtr->variantPtr->type;
-		NextToken();
-		switch (typeVariant)
+	try {
+		if (currentTokenPtr->type == Value)
 		{
+			auto typeVariant = currentTokenPtr->variantPtr->type;
+			NextToken();
+			switch (typeVariant)
+			{
 			case Char: return typeChar;
 			case Integer: return typeInteger;
 			case Real: return typeReal;
-		}
+			}
 
-		if (currentTokenPtr->type == Operator &&
-			(currentTokenPtr->_operator == compiler::plus ||
-				currentTokenPtr->_operator == compiler::minus))
-		{
-			NextToken();
-			return NumberWithoutSign();
-		}
+			if (currentTokenPtr->type == Operator &&
+				(currentTokenPtr->_operator == compiler::plus ||
+					currentTokenPtr->_operator == compiler::minus))
+			{
+				NextToken();
+				return NumberWithoutSign();
+			}
 
-		throw new SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
-			"Expected constant");
+			PrintExceptionMessage(Syntax,
+				lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+				"Expected constant");
+			throw CompilerException();
+		}
+	}
+	catch (CompilerException)
+	{
+		SkipToOperators(followers);
 	}
 }
 
@@ -593,63 +785,143 @@ CType* CSyntaxAnalyzer::NumberWithoutSign()
 		if (variantType == Integer)
 			return typeInteger;
 	}
-	throw SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), "Expected NumberWithoutSign");
+	PrintExceptionMessage(Syntax,
+		lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
+		"Expected NumberWithoutSign");
+	throw CompilerException();
 }
 
-CType* CSyntaxAnalyzer::CaseListItem()
+CType* CSyntaxAnalyzer::CaseListItem(list<EOperator> followers)
 {
+	list<EOperator> addFollowers = { colon };
 	//список меток варианта
-	auto typeLabels = CaseListLabels();
+	auto typeLabels = CaseListLabels(followers + addFollowers);
 	Accept(new CToken(Operator, colon));
 	if (currentTokenPtr->type == Value)
 	{
 		if (currentTokenPtr->variantPtr->type != Integer &&
 			currentTokenPtr->variantPtr->type != Char)
-			throw SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		{
+			PrintExceptionMessage(Semantic,
+				lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 				"Expected different type constant");
+		}
+			
 		return typeLabels;
 	}
-	_Operator();
+	_Operator(followers);
 	return typeLabels;
 }
 
-CType* CSyntaxAnalyzer::CaseListLabels()
+CType* CSyntaxAnalyzer::CaseListLabels(list<EOperator> followers)
 {
-	auto typeCaseLabel = CaseLabel();
+	list<EOperator> addFollowers = { comma };
+	list<EOperator> followers1 = followers + addFollowers;
+	auto typeCaseLabel = CaseLabel(followers1);
 	while (currentTokenPtr->type == Operator &&
 		currentTokenPtr->_operator == comma)
 	{
 		NextToken();
-		auto typeCaseLabelNext = CaseLabel();
-		if(typeCaseLabel != typeCaseLabelNext)
-			throw SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
+		auto typeCaseLabelNext = CaseLabel(followers1);
+		if (typeCaseLabel != nullptr && typeCaseLabelNext != nullptr &&
+			typeCaseLabel != typeCaseLabelNext)
+			PrintExceptionMessage(Semantic,
+				lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 				"case labels have different types");
 	}
 	return typeCaseLabel;
 }
 
-CType* CSyntaxAnalyzer::CaseLabel()
+CType* CSyntaxAnalyzer::CaseLabel(list<EOperator> followers)
 {
-	return Constant();
+	return Constant(followers);
 }
 
-void CSyntaxAnalyzer::Accept(CToken* targetToken)
+void CSyntaxAnalyzer::Accept(CToken* targetToken) throw (CompilerException)
 {
 	CTokenPtr targetTokenPtr = CTokenPtr(targetToken);
 	if (targetTokenPtr == nullptr ||
 		currentTokenPtr->type != targetTokenPtr->type ||
 		currentTokenPtr->type == Operator && currentTokenPtr->_operator != targetTokenPtr->_operator)
 	{
-		throw SyntaxException(lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), "Expected other type token");
+		PrintExceptionMessage(Syntax,
+			lexicalAnalyzer->GetNumberLineStartToken(), lexicalAnalyzer->GetNumberCharStartToken(),
+			"Expected token " + targetToken->ToString());
+		throw CompilerException();
 	}
 	NextToken();
 }
 
 void CSyntaxAnalyzer::NextToken()
 {
-	//ссчитываем новый токен
-	auto nextToken = lexicalAnalyzer->GetNextToken();
-	cout << nextToken->ToString() << endl;
-	//очищаем память из под текущего токена, записываем туда новый
-	currentTokenPtr.reset(nextToken);
+	CToken* nextToken = nullptr;
+	while (nextToken == nullptr)
+	{
+		try {
+			//ссчитываем новый токен
+			nextToken = lexicalAnalyzer->GetNextToken();
+			cout << nextToken->ToString() << endl;
+			//очищаем память из под текущего токена, записываем туда новый
+			currentTokenPtr.reset(nextToken);
+		}
+		catch (LexicalException ex) {
+
+			cout << ex.ToString() << endl;
+		}
+	}
+}
+
+bool CSyntaxAnalyzer::IsBelong(EOperator findingOperator, list<EOperator> operators)
+{
+	for (auto iterator = operators.begin(); iterator != operators.end(); iterator++)
+		if (*iterator == findingOperator)
+			return true;
+	return false;
+}
+
+bool CSyntaxAnalyzer::SkipToOperators(list<EOperator> operators, list<EOperator> followerOperators)
+{
+	bool inOperators = IsBelong(currentTokenPtr->_operator, operators);
+	bool inFollowerOperators = IsBelong(currentTokenPtr->_operator, followerOperators);
+	while (!inOperators && !inFollowerOperators)
+	{
+		try {
+			NextToken();
+			inOperators = IsBelong(currentTokenPtr->_operator, operators);
+			inFollowerOperators = IsBelong(currentTokenPtr->_operator, followerOperators);
+			//если дошли до конца файла
+			if (currentTokenPtr->type == Eof)
+				exit(0);
+		}
+		catch(LexicalException ex)
+		{
+
+		}
+	}
+	return inOperators;
+}
+
+bool CSyntaxAnalyzer::SkipToOperators(list<EOperator> operators)
+{
+	while (!IsBelong(currentTokenPtr->_operator, operators))
+	{
+		try {
+			NextToken();	
+			//если дошли до конца файла
+			if (currentTokenPtr->type == Eof)
+				exit(0);
+		}
+		catch (LexicalException ex)
+		{
+
+		}
+	}
+	return true;
+}
+
+void CSyntaxAnalyzer::PrintExceptionMessage(ExceptionType excType, int line, int liter, string exceptionMessage)
+{
+	cout << StrExceptionsTypes[excType] + ": position: " +
+		to_string(line) + "," + to_string(liter) +
+		".Description: " + exceptionMessage << endl;
 }

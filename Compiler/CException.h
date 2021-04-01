@@ -21,3 +21,7 @@ public:
 	void Print();
 	const char* GetErrorDescription();
 };
+
+class CompilerException : exception
+{
+};

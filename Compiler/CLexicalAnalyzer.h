@@ -38,13 +38,6 @@ private:
 	/// ѕропускает пробельные символы
 	/// </summary>
 	void SkipWhitespaces();
-	/// <summary>
-	/// ѕровер€ет наличие оператора среди переданных
-	/// </summary>
-	/// <param name="operators">ќператоры, среди которых идет поиск</param>
-	/// <param name="findingOperator">»скомый оператор</param>
-	/// <returns></returns>
-	bool IsBelong(EOperator findingOperator, list<EOperator> operators);
 public:
 	int GetNumberLine();
 	int GetNumberChar();
@@ -72,5 +65,4 @@ public:
 	/// <param name="token">“окен, до которого нужно пропускать</param>
 	/// <returns>true - если успешно пропущены токены до нужного, false - если не встретили нужного токена и дошли до конца файла</returns>
 	bool SkipToToken(CToken* token);
-	bool SkipToOperators(list<EOperator> operators);
 };
