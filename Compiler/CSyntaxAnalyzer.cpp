@@ -159,14 +159,21 @@ void CSyntaxAnalyzer::DefinitionVariables(list<EOperator> followers)
 			mapIdentifiers[newVariableIdentifier] = nullptr;
 		}
 	}
-	Accept(new CToken(Operator, colon));//:
-	auto typeVariables = Type(followers);////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//указываем тип у добавленных идентификаторов
-	for (auto iterator = listNewVariablesIdentifiers.begin(); iterator != listNewVariablesIdentifiers.end(); iterator++) 
-	{
-		newVariableIdentifier = *iterator;
-		mapIdentifiers[newVariableIdentifier] = typeVariables;
+	try {
+		Accept(new CToken(Operator, colon));//:
+		auto typeVariables = Type(followers);////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//указываем тип у добавленных идентификаторов
+		for (auto iterator = listNewVariablesIdentifiers.begin(); iterator != listNewVariablesIdentifiers.end(); iterator++)
+		{
+			newVariableIdentifier = *iterator;
+			mapIdentifiers[newVariableIdentifier] = typeVariables;
+		}
 	}
+	catch (CompilerException)
+	{
+		SkipToOperators(followers);
+	}
+
 }
 
 CType* CSyntaxAnalyzer::Type(list<EOperator> followers)
@@ -261,7 +268,6 @@ void CSyntaxAnalyzer::SectionRecord(map<string, CType*>& mapIdentifiersRecord, l
 		//если такой идентификатор не объ€влен
 		if (mapIdentifiersRecord.count(nameFiledRecord) == 0)
 		{
-			NextToken();
 			//записываем в таблицу идентификаторов новый идентификатор пока без типа
 			mapIdentifiersRecord[nameFiledRecord] = nullptr;
 			//записываем в временный список новый идентификатор пол€ записи
@@ -281,7 +287,6 @@ void CSyntaxAnalyzer::SectionRecord(map<string, CType*>& mapIdentifiersRecord, l
 		//если такой идентификатор не объ€влен
 		if (mapIdentifiersRecord.count(nameFiledRecord) == 0)
 		{
-			NextToken();
 			//записываем в таблицу идентификаторов новый идентификатор пока без типа
 			mapIdentifiersRecord[nameFiledRecord] = nullptr;
 			//записываем в временный список новый идентификатор пол€ записи
@@ -521,9 +526,16 @@ CType* CSyntaxAnalyzer::Variable(list<EOperator> followers)
 		PrintExceptionMessage(Semantic, 
 			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Variable not defined");
-		throw CompilerException();
+		return nullptr;
 	}
+
 	try {
+		if (mapIdentifiers[currentTokenPtr->identifier] == nullptr)
+		{
+			auto identifier = currentTokenPtr->identifier;
+			NextToken();
+			return nullptr;
+		}
 		//если тип переменной - запись
 		if (mapIdentifiers[currentTokenPtr->identifier]->type == EType::Record)
 			return VariableComponent();
@@ -589,7 +601,9 @@ CType* CSyntaxAnalyzer::Expression(list<EOperator> followers)
 			currentTokenPtr->_operator == compiler::latergreater)) //<>
 	{
 		NextToken();
-		if (typeExpression != SimpleExpression(followers))
+		auto typeExpressionRight = SimpleExpression(followers);
+		if (typeExpression != nullptr && typeExpressionRight != nullptr &&
+			typeExpression != typeExpressionRight)
 		{
 			PrintExceptionMessage(Semantic,
 				lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
