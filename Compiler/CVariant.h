@@ -20,7 +20,8 @@ enum EVariantType
 	String,
 	Char,
 	Real,
-	Record
+	Record,
+	Boolean
 };
 
 using namespace std;

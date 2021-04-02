@@ -498,7 +498,10 @@ void CSyntaxAnalyzer::AssignOperator(list<EOperator> followers)
 {
 	try {
 		list<EOperator> addFollowers = { assign };
-		auto typeVariable = Variable(followers + addFollowers);
+		//получаем название переменной и ее тип
+		 auto temp = Variable(followers + addFollowers);
+		 auto typeVariable = temp.second;
+
 		Accept(new CToken(Operator, assign));//:=
 		auto typeExpression = Expression(followers);
 		if ( typeVariable != nullptr && typeExpression != nullptr &&
@@ -507,6 +510,7 @@ void CSyntaxAnalyzer::AssignOperator(list<EOperator> followers)
 			PrintExceptionMessage(Semantic, lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 				"Types variable and expression doesn't match");
 		}
+		generator->WriteAssign(temp.first);
 	}
 	catch (CompilerException)
 	{
@@ -514,7 +518,7 @@ void CSyntaxAnalyzer::AssignOperator(list<EOperator> followers)
 	}
 }
 
-CType* CSyntaxAnalyzer::Variable(list<EOperator> followers)
+pair<string, CType*> CSyntaxAnalyzer::Variable(list<EOperator> followers)
 {
 	if (currentTokenPtr->type != Identifier)
 	{
@@ -523,13 +527,14 @@ CType* CSyntaxAnalyzer::Variable(list<EOperator> followers)
 			"Expected variable");
 		throw CompilerException();
 	}
+	auto ident = currentTokenPtr->identifier;
 	//если в таблице идентификаторов нет рассматриваемой переменной, то кидаем исключение
 	if (mapIdentifiers.count(currentTokenPtr->identifier) == 0)
 	{
 		PrintExceptionMessage(Semantic, 
 			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Variable not defined");
-		return nullptr;
+		return make_pair(currentTokenPtr->identifier, nullptr);
 	}
 
 	try {
@@ -537,20 +542,24 @@ CType* CSyntaxAnalyzer::Variable(list<EOperator> followers)
 		{
 			auto identifier = currentTokenPtr->identifier;
 			NextToken();
-			return nullptr;
+			return make_pair(identifier, nullptr);
 		}
 		//если тип переменной - запись
 		if (mapIdentifiers[currentTokenPtr->identifier]->type == EType::Record)
-			return VariableComponent();
+		{
+			auto type = VariableComponent();
+			return make_pair(ident, type);
+		}
 		auto identifier = currentTokenPtr->identifier;
 		NextToken();
 		//возвращаем тип переменной
-		return mapIdentifiers[identifier];
+		return make_pair(identifier, mapIdentifiers[identifier]);
 	}
 	catch (CompilerException)
 	{
 		SkipToOperators(followers);
-		return nullptr;
+		//возвращаем тип переменной
+		return make_pair(ident, nullptr);
 	}
 }
 
@@ -629,6 +638,7 @@ CType* CSyntaxAnalyzer::SimpleExpression(list<EOperator> followers)
 			currentTokenPtr->_operator == compiler::minus || //-
 			currentTokenPtr->_operator == compiler::_or)) //or
 	{
+		auto savedOperation = currentTokenPtr->_operator;
 		NextToken();
 		auto typeSummandRight = Summand(followers);
 		//если типы слагаемых не совпадают, то кидаем исключение
@@ -640,6 +650,7 @@ CType* CSyntaxAnalyzer::SimpleExpression(list<EOperator> followers)
 				"Expected another type");
 			return nullptr;
 		}
+		generator->WriteOperation(savedOperation);
 	}
 	return typeSummand;
 }
@@ -659,6 +670,7 @@ CType* CSyntaxAnalyzer::Summand(list<EOperator> followers)
 				currentTokenPtr->_operator == compiler::_mod ||
 				currentTokenPtr->_operator == compiler::_and))
 		{
+			auto savedOperation = currentTokenPtr->_operator;
 			NextToken();
 			auto typeMultiplierRight = Multiplier(followers);
 			//если типы множителей не совпадают, то кидаем исключение
@@ -670,6 +682,7 @@ CType* CSyntaxAnalyzer::Summand(list<EOperator> followers)
 					"Expected another type");
 				return nullptr;
 			}
+			generator->WriteOperation(savedOperation);
 		}
 		return typeMultiplier;
 	}
@@ -719,7 +732,11 @@ CType* CSyntaxAnalyzer::Multiplier(list<EOperator> followers)
 	}
 
 	if (currentTokenPtr->type == Identifier)
-		return Variable(followers);
+	{
+		auto temp = Variable(followers);
+		generator->WriteVariableValueToStack(temp.first);
+		return temp.second;
+	}
 
 	PrintExceptionMessage(Syntax,
 		lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
@@ -796,11 +813,18 @@ CType* CSyntaxAnalyzer::NumberWithoutSign()
 	if (currentTokenPtr->type == Value)
 	{
 		auto variantType = currentTokenPtr->variantPtr->type;
+		auto variant = currentTokenPtr->variantPtr->ToString();
 		NextToken();
 		if (variantType == Real)
+		{
+			generator->WriteConst(variantType, variant);
 			return typeReal;
+		}
 		if (variantType == Integer)
+		{
+			generator->WriteConst(variantType, variant);
 			return typeInteger;
+		}
 	}
 	PrintExceptionMessage(Syntax,
 		lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(), 
@@ -941,4 +965,5 @@ void CSyntaxAnalyzer::PrintExceptionMessage(ExceptionType excType, int line, int
 	cout << StrExceptionsTypes[excType] + ": position: " +
 		to_string(line) + "," + to_string(liter) +
 		".Description: " + exceptionMessage << endl;
+	generator->CancelGeneration();
 }

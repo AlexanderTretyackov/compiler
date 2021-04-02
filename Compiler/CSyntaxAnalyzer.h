@@ -140,7 +140,9 @@ class CSyntaxAnalyzer
 	/// <summary>
 	/// переменная
 	/// </summary>
-	CType* Variable(list<EOperator> followers);
+	/// <param name="followers"></param>
+	/// <returns>название начальной переменной и тип последней переменной</returns>
+	pair<string, CType*> Variable(list<EOperator> followers);
 	/// <summary>
 	/// компонента переменной
 	/// </summary>
