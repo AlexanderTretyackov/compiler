@@ -142,6 +142,7 @@
   <ItemGroup>
     <ClInclude Include="CError.h" />
     <ClInclude Include="CException.h" />
+    <ClInclude Include="CGenerator.h" />
     <ClInclude Include="CLexicalAnalyzer.h" />
     <ClInclude Include="CSyntaxAnalyzer.h" />
     <ClInclude Include="CType.h" />
@@ -150,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CException.cpp" />
+    <ClCompile Include="CGenerator.cpp" />
     <ClCompile Include="CLexicalAnalyzer.cpp" />
     <ClCompile Include="CSyntaxAnalyzer.cpp" />
     <ClCompile Include="CToken.cpp" />

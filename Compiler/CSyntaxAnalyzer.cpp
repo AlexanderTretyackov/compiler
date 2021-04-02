@@ -16,6 +16,7 @@ std::list<T> operator+(const std::list<T>& first, const std::list<T>& second)
 CSyntaxAnalyzer::CSyntaxAnalyzer(string fileName)
 {
 	lexicalAnalyzer = new CLexicalAnalyzer(fileName);
+	generator = new CGenerator("test.il");
 }
 
 void CSyntaxAnalyzer::Analyze()
@@ -46,6 +47,7 @@ void CSyntaxAnalyzer::Program()
 		SkipToOperators({ _type, _var, _begin });
 	}
 	Block();
+	generator->FinishWrite();
 }
 
 /// <summary>
@@ -167,6 +169,7 @@ void CSyntaxAnalyzer::DefinitionVariables(list<EOperator> followers)
 		{
 			newVariableIdentifier = *iterator;
 			mapIdentifiers[newVariableIdentifier] = typeVariables;
+			generator->DefineVariable(typeVariables->type, newVariableIdentifier);
 		}
 	}
 	catch (CompilerException)

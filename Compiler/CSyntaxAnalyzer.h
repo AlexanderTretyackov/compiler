@@ -2,6 +2,7 @@
 #include <list>
 #include <map>
 #include "CLexicalAnalyzer.h"
+#include "CGenerator.h"
 #include <fstream>
 #include <iostream>
 #include "CType.h"
@@ -19,6 +20,7 @@ const string StrExceptionsTypes[3] = { "Lexical", "Syntax", "Semantic" };
 
 class CSyntaxAnalyzer
 {
+	CGenerator* generator;
 	CLexicalAnalyzer* lexicalAnalyzer;
 	CTokenPtr currentTokenPtr;
 	CType* typeInteger = new CType(EType::Integer);
