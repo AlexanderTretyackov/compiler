@@ -16,7 +16,7 @@ enum ExceptionType {
 	Semantic
 };
 
-const string StrExceptionsTypes[3] = { "Lexical", "Syntax", "Semantic" };
+const string StrExceptionsTypes[3] = { "Lexical Error", "Syntax Error", "Semantic Error" };
 
 class CSyntaxAnalyzer
 {
