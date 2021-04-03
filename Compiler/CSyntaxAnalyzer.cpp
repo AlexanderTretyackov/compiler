@@ -426,6 +426,7 @@ void CSyntaxAnalyzer::WithOperator()
 void CSyntaxAnalyzer::WhileOperator(list<EOperator> followers)
 {
 	Accept(new CToken(Operator, _while));
+	generator->WriteMarkWhileStart();
 	list<EOperator> additionalFollowers = { _do };
 	auto typeExpression = Expression(followers + additionalFollowers);
 
@@ -434,7 +435,9 @@ void CSyntaxAnalyzer::WhileOperator(list<EOperator> followers)
 			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Expected boolean expression");
 	Accept(new CToken(Operator, _do));
+	generator->WriteMarkWhileBodyStart();
 	_Operator(followers);
+	generator->WriteMarkWhileEnd();
 }
 
 void CSyntaxAnalyzer::CompountOperator(list<EOperator> followers)

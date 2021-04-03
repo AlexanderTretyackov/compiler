@@ -36,9 +36,9 @@ void CGenerator::WriteOperation(EOperator operation)
 
 		case compiler::later:  outputIlFile << "clt" << endl; break; // <
 		case compiler::greater:  outputIlFile << "cgt" << endl; break; // >
-		case compiler::laterequal:  outputIlFile << "ldc.i4.0" << "ceq" << endl; break; // <=
-		case compiler::greaterequal:  outputIlFile << "cgt" << "ldc.i4.0" << "ceq" << endl; break; // >=
-		case compiler::latergreater:  outputIlFile << "ceq" << "ldc.i4.0" << "ceq" << endl; break; // <>
+		case compiler::laterequal:  outputIlFile << "cgt" << endl << "ldc.i4.0" << endl << "ceq" << endl; break; // <=
+		case compiler::greaterequal:  outputIlFile << "clt" << endl << "ldc.i4.0" << endl << "ceq" << endl; break; // >=
+		case compiler::latergreater:  outputIlFile << "ceq" << endl << "ldc.i4.0" << endl << "ceq" << endl; break; // <>
 			
 		//default:
 			//exit(0);
@@ -85,6 +85,40 @@ void CGenerator::WriteMarkIfEnd()
 	outputIlFile << marksIf.top() << " : ";
 	//убираем из стека конца оператора if
 	marksIf.pop();
+}
+
+void CGenerator::WriteMarkWhileStart()
+{
+	if (isGenerationCancelled)
+		return;
+	//создаем новую метку начала оператора while
+	auto mark = "_WHILE" + to_string(countMarks++);
+	outputIlFile << mark << " : " << endl;
+	marksWhileStart.push(mark);
+}
+
+void CGenerator::WriteMarkWhileBodyStart()
+{
+	if (isGenerationCancelled)
+		return;
+	auto mark = "_WHILE" + to_string(countMarks++);
+	outputIlFile << "brfalse " << mark << endl;
+	marksWhileEnd.push(mark);
+}
+
+void CGenerator::WriteMarkWhileEnd()
+{
+	if (isGenerationCancelled)
+		return;
+	auto markWhileStart = marksWhileStart.top();
+	//делаем безусловный переход на начало цикла while (на проверку)
+	outputIlFile << "br " << markWhileStart << endl;
+	marksWhileStart.pop();
+
+	auto markWhileEnd = marksWhileEnd.top();
+	//пишем метку конца while
+	outputIlFile << markWhileEnd << " : " << endl;
+	marksWhileEnd.pop();
 }
 
 void CGenerator::WriteAssign(string variableName)

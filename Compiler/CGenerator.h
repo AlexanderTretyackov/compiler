@@ -14,6 +14,14 @@ private:
 	/// Стек меток для работы с оператором if
 	/// </summary>
 	stack<string> marksIf;
+	/// <summary>
+	/// Список меток начала оператора while (на условие)
+	/// </summary>
+	stack<string> marksWhileStart;
+	/// <summary>
+	/// Список меток конца оператора while
+	/// </summary>
+	stack<string> marksWhileEnd;
 	ofstream outputIlFile;
 	/// <summary>
 	/// Отменена ли генерация
@@ -58,5 +66,9 @@ public:
 	void WriteMarkIfStart();
 	void WriteMarkElseStart();
 	void WriteMarkIfEnd();
+
+	void WriteMarkWhileStart();
+	void WriteMarkWhileBodyStart();
+	void WriteMarkWhileEnd();
 };
 
