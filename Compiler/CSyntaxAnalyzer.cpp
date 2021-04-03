@@ -42,7 +42,7 @@ void CSyntaxAnalyzer::Program()
 	try {
 		Accept(new CToken(Operator, semicolon));// ;
 	}
-	catch (SyntaxException)
+	catch (CompilerException)
 	{
 		SkipToOperators({ _type, _var, _begin });
 	}
@@ -452,7 +452,7 @@ void CSyntaxAnalyzer::CompountOperator(list<EOperator> followers)
 			if (currentTokenPtr->type == Operator
 				&& currentTokenPtr->_operator == _end)
 				break;
-			_Operator(followers);
+			_Operator(followers + addFollowers);
 		}
 		Accept(new CToken(Operator, _end));
 	}
@@ -540,6 +540,7 @@ pair<string, CType*> CSyntaxAnalyzer::Variable(list<EOperator> followers)
 		PrintExceptionMessage(Semantic, 
 			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Variable not defined");
+		NextToken();
 		return make_pair(currentTokenPtr->identifier, nullptr);
 	}
 
@@ -958,7 +959,12 @@ bool CSyntaxAnalyzer::SkipToOperators(list<EOperator> operators)
 			NextToken();	
 			//если дошли до конца файла
 			if (currentTokenPtr->type == Eof)
+			{
+				PrintExceptionMessage(Syntax, 
+					lexicalAnalyzer->GetNumberLineStartToken(), lexicalAnalyzer->GetNumberCharStartToken(),
+					"Unexpected end of file");
 				exit(0);
+			}
 		}
 		catch (LexicalException ex)
 		{
