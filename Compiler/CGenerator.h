@@ -72,3 +72,4 @@ public:
 	void WriteMarkWhileEnd();
 };
 
+typedef std::unique_ptr<CGenerator> CGeneratorPtr;

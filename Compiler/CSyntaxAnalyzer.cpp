@@ -15,8 +15,8 @@ std::list<T> operator+(const std::list<T>& first, const std::list<T>& second)
 
 CSyntaxAnalyzer::CSyntaxAnalyzer(string fileName)
 {
-	lexicalAnalyzer = new CLexicalAnalyzer(fileName);
-	generator = new CGenerator("test.il");
+	lexicalAnalyzer.reset(new CLexicalAnalyzer(fileName));
+	generator.reset(new CGenerator("test.il"));
 }
 
 void CSyntaxAnalyzer::Analyze()

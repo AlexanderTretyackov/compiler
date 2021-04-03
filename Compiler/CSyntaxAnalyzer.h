@@ -20,8 +20,8 @@ const string StrExceptionsTypes[3] = { "Lexical", "Syntax", "Semantic" };
 
 class CSyntaxAnalyzer
 {
-	CGenerator* generator;
-	CLexicalAnalyzer* lexicalAnalyzer;
+	CGeneratorPtr generator;
+	CLexicalAnalyzerPtr lexicalAnalyzer;
 	CTokenPtr currentTokenPtr;
 	CType* typeInteger = new CType(EType::Integer);
 	CType* typeChar = new CType(EType::Char);
@@ -227,3 +227,5 @@ public:
 	/// </summary>
 	void Analyze();
 };
+
+typedef std::unique_ptr<CSyntaxAnalyzer> CSyntaxAnalyzerPtr;

@@ -66,3 +66,5 @@ public:
 	/// <returns>true - если успешно пропущены токены до нужного, false - если не встретили нужного токена и дошли до конца файла</returns>
 	bool SkipToToken(CToken* token);
 };
+
+typedef std::unique_ptr<CLexicalAnalyzer> CLexicalAnalyzerPtr;
