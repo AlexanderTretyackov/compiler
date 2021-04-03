@@ -3,19 +3,24 @@
 #include <iostream>
 #include "CType.h"
 #include "CToken.h"
+#include <stack>
+#include <list>
 
 using namespace types;
 
 class CGenerator {
 private:
 	/// <summary>
-	/// файл с il кодом
+	/// Стек меток для работы с оператором if
 	/// </summary>
+	stack<string> marksIf;
 	ofstream outputIlFile;
+	list<pair<EType, string>> tempListVariables = {};
 	/// <summary>
 	/// Отменена ли генерация
 	/// </summary>
 	bool isGenerationCancelled = false;
+	int countMarks = 0;
 public:
 	CGenerator(string outputIlFileName);
 	/// <summary>
@@ -50,5 +55,9 @@ public:
 	/// Отменяет генерацию кода
 	/// </summary>
 	void CancelGeneration();
+
+	void WriteMarkIfStart();
+	void WriteMarkElseStart();
+	void WriteMarkIfEnd();
 };
 

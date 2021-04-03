@@ -337,13 +337,16 @@ void CSyntaxAnalyzer::IfOperator(list<EOperator> followers)
 			lexicalAnalyzer->GetNumberLine(), lexicalAnalyzer->GetNumberChar(),
 			"Expected boolean expression");
 	Accept(new CToken(Operator, _then));
+	generator->WriteMarkIfStart();
 	list<EOperator> addFollowers = { _else };
 	_Operator(followers + addFollowers);
 	if (currentTokenPtr->type == Operator && currentTokenPtr->_operator == _else)
 	{
+		generator->WriteMarkElseStart();
 		NextToken();
 		_Operator(followers);
 	}
+	generator->WriteMarkIfEnd();
 }
 
 void CSyntaxAnalyzer::CaseOperator(list<EOperator> followers)
@@ -612,6 +615,7 @@ CType* CSyntaxAnalyzer::Expression(list<EOperator> followers)
 			currentTokenPtr->_operator == compiler::greaterequal || //>=
 			currentTokenPtr->_operator == compiler::latergreater)) //<>
 	{
+		auto savedOperation = currentTokenPtr->_operator;
 		NextToken();
 		auto typeExpressionRight = SimpleExpression(followers);
 		if (typeExpression != nullptr && typeExpressionRight != nullptr &&
@@ -622,6 +626,7 @@ CType* CSyntaxAnalyzer::Expression(list<EOperator> followers)
 				"Expected another expression type");
 			return nullptr;
 		}
+		generator->WriteOperation(savedOperation);
 		//возвращаем логический тип для выражения, т.к. был оператор сравнения
 		return typeBoolean;
 	}

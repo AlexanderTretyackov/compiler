@@ -13,11 +13,13 @@ const string stringsForTypes[4] =
 
 void CGenerator::WriteDefaultInfo()
 {
+	if (isGenerationCancelled)
+		return;
 	outputIlFile << ".assembly CGenerator {}" << endl <<
 		".method static void main()" << endl <<
 		"{" << endl <<
 		".entrypoint" << endl <<
-		".maxstack 1" << endl;
+		".maxstack 10" << endl;
 }
 
 void CGenerator::WriteOperation(EOperator operation)
@@ -31,6 +33,13 @@ void CGenerator::WriteOperation(EOperator operation)
 		case compiler::minus:  outputIlFile << "sub" << endl; break;
 		case compiler::_div:  outputIlFile << "div" << endl; break;
 		case compiler::_mod:  outputIlFile << "rem" << endl; break;
+
+		case compiler::later:  outputIlFile << "clt" << endl; break; // <
+		case compiler::greater:  outputIlFile << "cgt" << endl; break; // >
+		case compiler::laterequal:  outputIlFile << "ldc.i4.0" << "ceq" << endl; break; // <=
+		case compiler::greaterequal:  outputIlFile << "cgt" << "ldc.i4.0" << "ceq" << endl; break; // >=
+		case compiler::latergreater:  outputIlFile << "ceq" << "ldc.i4.0" << "ceq" << endl; break; // <>
+			
 		//default:
 			//exit(0);
 	}
@@ -39,6 +48,43 @@ void CGenerator::WriteOperation(EOperator operation)
 void CGenerator::CancelGeneration()
 {
 	isGenerationCancelled = true;
+}
+
+void CGenerator::WriteMarkIfStart()
+{
+	if (isGenerationCancelled)
+		return;
+	//создаем новую метку для перехода через блок then
+	auto mark = "_IF" + to_string(countMarks++);
+	//добавляем в стек меток новую метку
+	marksIf.push(mark);
+	outputIlFile << "brfalse " << mark << endl;
+}
+
+void CGenerator::WriteMarkElseStart()
+{
+	if (isGenerationCancelled)
+		return;
+	//создаем новую метку на конeц оператора if
+	auto mark = "_IF" + to_string(countMarks++);
+	//пишем команду безусловного перехода на метку конца оператора if
+	outputIlFile << "br " << mark << endl;
+	//ставим метку начала ветки else
+	outputIlFile << marksIf.top() << " : ";
+	//убираем из стека метку начала ветки else
+	marksIf.pop();
+	//добавляем в стек новую метку для конца оператора if
+	marksIf.push(mark);
+}
+
+void CGenerator::WriteMarkIfEnd()
+{
+	if (isGenerationCancelled)
+		return;
+	//ставим метку конца оператора if
+	outputIlFile << marksIf.top() << " : ";
+	//убираем из стека конца оператора if
+	marksIf.pop();
 }
 
 void CGenerator::WriteAssign(string variableName)
@@ -52,7 +98,10 @@ void CGenerator::FinishWrite()
 {
 	if (isGenerationCancelled)
 		return;
-	outputIlFile << "ret" << endl <<
+	outputIlFile << "ldloc x" << endl <<
+		"box int32" << endl <<
+		"call void[mscorlib]System.Console::WriteLine(object)" << endl <<
+		"ret" << endl <<
 		"}";
 }
 
@@ -79,6 +128,8 @@ void CGenerator::WriteVariableValueToStack(string variableName)
 }
 
 CGenerator::CGenerator(string outputIlFileName) {
+	if (isGenerationCancelled)
+		return;
 	outputIlFile.open(outputIlFileName, ios::out);
 	WriteDefaultInfo();
 }
