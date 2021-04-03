@@ -15,7 +15,6 @@ private:
 	/// </summary>
 	stack<string> marksIf;
 	ofstream outputIlFile;
-	list<pair<EType, string>> tempListVariables = {};
 	/// <summary>
 	/// Отменена ли генерация
 	/// </summary>
